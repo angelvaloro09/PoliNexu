@@ -3,12 +3,20 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from core.config import settings
 
+database_url = settings.database_url
+# Render's DATABASE_URL usa postgres:// o postgresql:// sin driver explícito;
+# SQLAlchemy por defecto intenta psycopg2 (no instalado, usamos psycopg v3).
+if database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql+psycopg://", 1)
+elif database_url.startswith("postgresql://"):
+    database_url = database_url.replace("postgresql://", "postgresql+psycopg://", 1)
+
 connect_args = {}
-if settings.database_url.startswith("sqlite"):
+if database_url.startswith("sqlite"):
     connect_args["check_same_thread"] = False
 
 engine = create_engine(
-    settings.database_url,
+    database_url,
     connect_args=connect_args,
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
