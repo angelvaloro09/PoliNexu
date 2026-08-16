@@ -8,6 +8,7 @@ import '../../data/repositories/auth_repository_impl.dart';
 import '../../data/repositories/calendar_repository_impl.dart';
 import '../../data/repositories/grades_repository_impl.dart';
 import '../../data/repositories/kardex_repository_impl.dart';
+import '../../data/repositories/profile_repository_impl.dart';
 import '../../data/repositories/reinscription_repository_impl.dart';
 import '../../data/repositories/schedule_overrides_repository_impl.dart';
 import '../../data/repositories/schedule_repository_impl.dart';
@@ -21,6 +22,7 @@ import '../../domain/repositories/calendar_repository.dart';
 import '../../domain/repositories/grades_repository.dart';
 import '../../domain/repositories/kardex_repository.dart';
 import '../../domain/repositories/notification_service.dart';
+import '../../domain/repositories/profile_repository.dart';
 import '../../domain/repositories/reinscription_repository.dart';
 import '../../domain/repositories/schedule_overrides_repository.dart';
 import '../../domain/repositories/schedule_repository.dart';
@@ -32,6 +34,7 @@ import '../../presentation/blocs/auth/auth_cubit.dart';
 import '../../presentation/blocs/calendar/calendar_cubit.dart';
 import '../../presentation/blocs/grades/grades_cubit.dart';
 import '../../presentation/blocs/kardex/kardex_cubit.dart';
+import '../../presentation/blocs/profile/profile_cubit.dart';
 import '../../presentation/blocs/reinscription/reinscription_cubit.dart';
 import '../../presentation/blocs/schedule/schedule_cubit.dart';
 import '../../presentation/blocs/schedule/schedule_overrides_cubit.dart';
@@ -76,6 +79,9 @@ void configureDependencies() {
   getIt.registerLazySingleton<ReinscriptionRepository>(
     () => ReinscriptionRepositoryImpl(getIt(), getIt(), getIt(), getIt()),
   );
+  getIt.registerLazySingleton<ProfileRepository>(
+    () => ProfileRepositoryImpl(getIt(), getIt(), getIt(), getIt()),
+  );
   getIt.registerLazySingleton<TaskRepository>(
     () => TaskRepositoryImpl(getIt()),
   );
@@ -97,6 +103,7 @@ void configureDependencies() {
   getIt.registerLazySingleton(() => CalendarCubit(getIt(), getIt(), getIt()));
   getIt.registerLazySingleton(() => GradesCubit(getIt(), getIt()));
   getIt.registerLazySingleton(() => KardexCubit(getIt()));
+  getIt.registerLazySingleton(() => ProfileCubit(getIt()));
   getIt.registerLazySingleton(() => AcademicStatusCubit(getIt()));
   getIt.registerLazySingleton(() => ReinscriptionCubit(getIt(), getIt(), getIt()));
   getIt.registerLazySingleton(() => TasksCubit(getIt(), getIt()));

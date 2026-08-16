@@ -25,6 +25,7 @@ class TaskRepositoryImpl implements TaskRepository {
       iconKey: Value(task.iconKey),
       alarmEnabled: Value(task.alarmEnabled),
       subject: Value(task.subject),
+      recurrenceGroupId: Value(task.recurrenceGroupId),
     ));
     return TaskItem(
       id: id,
@@ -39,6 +40,7 @@ class TaskRepositoryImpl implements TaskRepository {
       iconKey: task.iconKey,
       alarmEnabled: task.alarmEnabled,
       subject: task.subject,
+      recurrenceGroupId: task.recurrenceGroupId,
     );
   }
 
@@ -57,6 +59,7 @@ class TaskRepositoryImpl implements TaskRepository {
       iconKey: task.iconKey,
       alarmEnabled: task.alarmEnabled,
       subject: task.subject,
+      recurrenceGroupId: task.recurrenceGroupId,
     ));
   }
 
@@ -76,5 +79,6 @@ class TaskRepositoryImpl implements TaskRepository {
         iconKey: row.iconKey,
         alarmEnabled: row.alarmEnabled,
         subject: row.subject,
+        recurrenceGroupId: row.recurrenceGroupId,
       );
 }

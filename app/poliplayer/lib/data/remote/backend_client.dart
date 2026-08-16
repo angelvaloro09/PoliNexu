@@ -440,6 +440,24 @@ class ReinscriptionDto {
       );
 }
 
+class ProfileDto {
+  final String boleta;
+  final String nombre;
+  final String plantel;
+
+  ProfileDto({required this.boleta, required this.nombre, required this.plantel});
+
+  factory ProfileDto.fromJson(Map<String, dynamic> json) => ProfileDto(
+        boleta: json['boleta'] as String,
+        nombre: json['nombre'] as String,
+        plantel: json['plantel'] as String,
+      );
+}
+
+extension ProfileDtoJson on ProfileDto {
+  Map<String, dynamic> toJson() => {'boleta': boleta, 'nombre': nombre, 'plantel': plantel};
+}
+
 extension ReinscriptionDtoJson on ReinscriptionDto {
   Map<String, dynamic> toJson() => {
         'average': average,
@@ -659,6 +677,18 @@ class BackendClient {
         queryParameters: {'session_token': sessionToken},
       );
       return ReinscriptionDto.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _mapError(e);
+    }
+  }
+
+  Future<ProfileDto> getProfile(String sessionToken) async {
+    try {
+      final response = await _dio.get(
+        '/saes/profile',
+        queryParameters: {'session_token': sessionToken},
+      );
+      return ProfileDto.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw _mapError(e);
     }

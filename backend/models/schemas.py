@@ -185,3 +185,9 @@ class ReinscriptionResponse(BaseModel):
     periods_available: str
     authorized_load: str
     failed_credits_breakdown: list[ReinscriptionCreditItem]
+
+
+class ProfileResponse(BaseModel):
+    boleta: str
+    nombre: str
+    plantel: str

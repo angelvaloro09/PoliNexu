@@ -26,7 +26,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -45,6 +45,9 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 6) {
             await m.addColumn(tasks, tasks.hasTime);
+          }
+          if (from < 7) {
+            await m.addColumn(tasks, tasks.recurrenceGroupId);
           }
         },
       );

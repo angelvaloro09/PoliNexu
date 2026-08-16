@@ -5,6 +5,7 @@ from core.saes_pages import (
     ACADEMIC_STATUS_PATH,
     GRADES_PATH,
     KARDEX_PATH,
+    PROFILE_PATH,
     REINSCRIPTION_PATH,
     SCHEDULE_PATH,
 )
@@ -13,6 +14,7 @@ from models.schemas import (
     AcademicStatusResponse,
     GradesResponse,
     KardexResponse,
+    ProfileResponse,
     ReinscriptionResponse,
     ScheduleResponse,
 )
@@ -20,6 +22,7 @@ from services.parsers.academic_status_parser import parse_academic_status
 from services.parsers.grades_parser import parse_grades
 from services.parsers.horario_parser import parse_schedule
 from services.parsers.kardex_parser import parse_kardex
+from services.parsers.profile_parser import parse_profile
 from services.parsers.reinscription_parser import parse_reinscription
 from services.saes_scraper import decode_html
 from services.session_manager import SaesSessionState, session_manager
@@ -101,3 +104,10 @@ def get_reinscription(session_token: str) -> ReinscriptionResponse:
     state, school = _authenticated_state(session_token)
     html = _fetch_authenticated_page(state, school, REINSCRIPTION_PATH, session_token)
     return ReinscriptionResponse(**parse_reinscription(html))
+
+
+@router.get("/profile", response_model=ProfileResponse)
+def get_profile(session_token: str) -> ProfileResponse:
+    state, school = _authenticated_state(session_token)
+    html = _fetch_authenticated_page(state, school, PROFILE_PATH, session_token)
+    return ProfileResponse(**parse_profile(html))

@@ -15,4 +15,5 @@ class Tasks extends Table {
   BoolColumn get alarmEnabled => boolean().withDefault(const Constant(true))();
   TextColumn get subject => text().nullable()();
   BoolColumn get hasTime => boolean().withDefault(const Constant(false))();
+  TextColumn get recurrenceGroupId => text().nullable()();
 }

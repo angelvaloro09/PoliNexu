@@ -9,6 +9,7 @@ import '../screens/kardex/kardex_screen.dart';
 import '../screens/login/login_screen.dart';
 import '../screens/login/reauth_screen.dart';
 import '../screens/onboarding/onboarding_screen.dart';
+import '../screens/profile/profile_screen.dart';
 import '../screens/schedule/schedule_screen.dart';
 import '../screens/splash/splash_screen.dart';
 import '../screens/tasks/tasks_screen.dart';
@@ -99,6 +100,11 @@ GoRouter buildAppRouter() {
             path: '/tasks',
             pageBuilder: (context, state) =>
                 _fadeThroughPage(state.pageKey, const TasksScreen()),
+          ),
+          GoRoute(
+            path: '/profile',
+            pageBuilder: (context, state) =>
+                _fadeThroughPage(state.pageKey, const ProfileScreen()),
           ),
         ],
       ),

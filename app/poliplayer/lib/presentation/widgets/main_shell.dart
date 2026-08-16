@@ -8,29 +8,69 @@ import '../blocs/auth/auth_cubit.dart';
 class _ShellDestination {
   final String path;
   final String label;
-  final IconData icon;
+  final Widget Function(bool selected) iconBuilder;
 
   const _ShellDestination({
     required this.path,
     required this.label,
-    required this.icon,
+    required this.iconBuilder,
   });
 }
 
-const _destinations = [
-  _ShellDestination(path: '/home', label: 'Inicio', icon: Symbols.home_rounded),
-  _ShellDestination(path: '/schedule', label: 'Horario', icon: Symbols.calendar_today_rounded),
-  _ShellDestination(path: '/grades', label: 'Notas', icon: Symbols.school_rounded),
-  _ShellDestination(path: '/tasks', label: 'Tareas', icon: Symbols.checklist_rounded),
+const _ipnLogoAsset = 'assets/branding/ipn-logo.png';
+
+final List<_ShellDestination> _destinations = [
+  _ShellDestination(
+    path: '/home',
+    label: 'Inicio',
+    iconBuilder: _symbolIcon(Symbols.home_rounded),
+  ),
+  _ShellDestination(
+    path: '/schedule',
+    label: 'Horario',
+    iconBuilder: _symbolIcon(Symbols.calendar_today_rounded),
+  ),
+  _ShellDestination(
+    path: '/grades',
+    label: 'Notas',
+    iconBuilder: _ipnLogoIcon,
+  ),
+  _ShellDestination(
+    path: '/tasks',
+    label: 'Tareas',
+    iconBuilder: _symbolIcon(Symbols.checklist_rounded),
+  ),
+  _ShellDestination(
+    path: '/profile',
+    label: 'Perfil',
+    iconBuilder: _symbolIcon(Symbols.person_rounded),
+  ),
 ];
+
+/// Fábrica de `iconBuilder` para destinos con Material Symbol: mismo glifo
+/// sin/con relleno (`fill: 0`/`1`) según selección, como en Gemini/NotebookLM.
+Widget Function(bool selected) _symbolIcon(IconData icon) {
+  return (selected) => Icon(icon, fill: selected ? 1 : 0);
+}
+
+/// El destino "Notas" usa el escudo del IPN en vez de un Material Symbol —
+/// un PNG no tiene el eje de relleno variable, así que no hay variante
+/// seleccionada/no seleccionada: el pill/indicador que ya dibuja
+/// `NavigationBar` detrás del ícono activo es suficiente señal.
+Widget _ipnLogoIcon(bool selected) {
+  return Image.asset(_ipnLogoAsset, width: 24, height: 24);
+}
 
 /// Shell de navegación principal (Material 3 `NavigationBar`) para las
 /// rutas envueltas por el `ShellRoute` en `app_router.dart`.
 ///
-/// Los íconos usan Material Symbols (`Symbols.xxx_rounded`) — el mismo glifo
-/// se usa sin/con relleno (`fill: 0`/`1`) para el estado normal/seleccionado,
-/// igual que en Gemini/NotebookLM, en vez de alternar entre dos pictogramas
-/// distintos (`_outlined` vs. sólido) como en Material Icons clásico.
+/// El navbar es sólo-íconos (`labelBehavior: alwaysHide`) para que quepan
+/// 5 destinos sin textos cortados — `label` se conserva en cada
+/// `NavigationDestination` únicamente para accesibilidad/tooltip, no se ve.
+/// Cada destino resuelve su ícono vía `iconBuilder`: la mayoría son Material
+/// Symbols (`Symbols.xxx_rounded`, con el truco de `fill: 0/1` para el estado
+/// seleccionado, igual que en Gemini/NotebookLM), salvo "Notas" que usa el
+/// escudo del IPN como `Image.asset`.
 class MainShell extends StatefulWidget {
   final Widget child;
   final String location;
@@ -73,6 +113,7 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final selectedIndex = _selectedIndex;
     return Scaffold(
       // La transición entre pestañas la hace el Navigator del ShellRoute
       // (`CustomTransitionPage` en app_router.dart), no un AnimatedSwitcher
@@ -80,13 +121,14 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
       // su GlobalKey → "Duplicate GlobalKey detected in widget tree".
       body: widget.child,
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
+        selectedIndex: selectedIndex,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
         onDestinationSelected: (index) => context.go(_destinations[index].path),
         destinations: [
           for (final destination in _destinations)
             NavigationDestination(
-              icon: Icon(destination.icon),
-              selectedIcon: Icon(destination.icon, fill: 1),
+              icon: destination.iconBuilder(false),
+              selectedIcon: destination.iconBuilder(true),
               label: destination.label,
             ),
         ],

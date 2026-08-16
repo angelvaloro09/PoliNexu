@@ -27,6 +27,7 @@ class TaskItem {
   final String? iconKey;
   final bool alarmEnabled;
   final String? subject;
+  final String? recurrenceGroupId;
 
   const TaskItem({
     this.id,
@@ -41,6 +42,7 @@ class TaskItem {
     this.iconKey,
     this.alarmEnabled = true,
     this.subject,
+    this.recurrenceGroupId,
   });
 
   TaskItem copyWith({
@@ -54,6 +56,7 @@ class TaskItem {
     String? iconKey,
     bool? alarmEnabled,
     String? subject,
+    String? recurrenceGroupId,
   }) {
     return TaskItem(
       id: id,
@@ -68,6 +71,7 @@ class TaskItem {
       iconKey: iconKey ?? this.iconKey,
       alarmEnabled: alarmEnabled ?? this.alarmEnabled,
       subject: subject ?? this.subject,
+      recurrenceGroupId: recurrenceGroupId ?? this.recurrenceGroupId,
     );
   }
 }

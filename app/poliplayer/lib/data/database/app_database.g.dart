@@ -157,6 +157,18 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _recurrenceGroupIdMeta = const VerificationMeta(
+    'recurrenceGroupId',
+  );
+  @override
+  late final GeneratedColumn<String> recurrenceGroupId =
+      GeneratedColumn<String>(
+        'recurrence_group_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -171,6 +183,7 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
     alarmEnabled,
     subject,
     hasTime,
+    recurrenceGroupId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -264,6 +277,15 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
         hasTime.isAcceptableOrUnknown(data['has_time']!, _hasTimeMeta),
       );
     }
+    if (data.containsKey('recurrence_group_id')) {
+      context.handle(
+        _recurrenceGroupIdMeta,
+        recurrenceGroupId.isAcceptableOrUnknown(
+          data['recurrence_group_id']!,
+          _recurrenceGroupIdMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -321,6 +343,10 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
         DriftSqlType.bool,
         data['${effectivePrefix}has_time'],
       )!,
+      recurrenceGroupId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}recurrence_group_id'],
+      ),
     );
   }
 
@@ -343,6 +369,7 @@ class Task extends DataClass implements Insertable<Task> {
   final bool alarmEnabled;
   final String? subject;
   final bool hasTime;
+  final String? recurrenceGroupId;
   const Task({
     required this.id,
     required this.title,
@@ -356,6 +383,7 @@ class Task extends DataClass implements Insertable<Task> {
     required this.alarmEnabled,
     this.subject,
     required this.hasTime,
+    this.recurrenceGroupId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -380,6 +408,9 @@ class Task extends DataClass implements Insertable<Task> {
       map['subject'] = Variable<String>(subject);
     }
     map['has_time'] = Variable<bool>(hasTime);
+    if (!nullToAbsent || recurrenceGroupId != null) {
+      map['recurrence_group_id'] = Variable<String>(recurrenceGroupId);
+    }
     return map;
   }
 
@@ -405,6 +436,9 @@ class Task extends DataClass implements Insertable<Task> {
           ? const Value.absent()
           : Value(subject),
       hasTime: Value(hasTime),
+      recurrenceGroupId: recurrenceGroupId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(recurrenceGroupId),
     );
   }
 
@@ -426,6 +460,9 @@ class Task extends DataClass implements Insertable<Task> {
       alarmEnabled: serializer.fromJson<bool>(json['alarmEnabled']),
       subject: serializer.fromJson<String?>(json['subject']),
       hasTime: serializer.fromJson<bool>(json['hasTime']),
+      recurrenceGroupId: serializer.fromJson<String?>(
+        json['recurrenceGroupId'],
+      ),
     );
   }
   @override
@@ -444,6 +481,7 @@ class Task extends DataClass implements Insertable<Task> {
       'alarmEnabled': serializer.toJson<bool>(alarmEnabled),
       'subject': serializer.toJson<String?>(subject),
       'hasTime': serializer.toJson<bool>(hasTime),
+      'recurrenceGroupId': serializer.toJson<String?>(recurrenceGroupId),
     };
   }
 
@@ -460,6 +498,7 @@ class Task extends DataClass implements Insertable<Task> {
     bool? alarmEnabled,
     Value<String?> subject = const Value.absent(),
     bool? hasTime,
+    Value<String?> recurrenceGroupId = const Value.absent(),
   }) => Task(
     id: id ?? this.id,
     title: title ?? this.title,
@@ -473,6 +512,9 @@ class Task extends DataClass implements Insertable<Task> {
     alarmEnabled: alarmEnabled ?? this.alarmEnabled,
     subject: subject.present ? subject.value : this.subject,
     hasTime: hasTime ?? this.hasTime,
+    recurrenceGroupId: recurrenceGroupId.present
+        ? recurrenceGroupId.value
+        : this.recurrenceGroupId,
   );
   Task copyWithCompanion(TasksCompanion data) {
     return Task(
@@ -494,6 +536,9 @@ class Task extends DataClass implements Insertable<Task> {
           : this.alarmEnabled,
       subject: data.subject.present ? data.subject.value : this.subject,
       hasTime: data.hasTime.present ? data.hasTime.value : this.hasTime,
+      recurrenceGroupId: data.recurrenceGroupId.present
+          ? data.recurrenceGroupId.value
+          : this.recurrenceGroupId,
     );
   }
 
@@ -511,7 +556,8 @@ class Task extends DataClass implements Insertable<Task> {
           ..write('iconKey: $iconKey, ')
           ..write('alarmEnabled: $alarmEnabled, ')
           ..write('subject: $subject, ')
-          ..write('hasTime: $hasTime')
+          ..write('hasTime: $hasTime, ')
+          ..write('recurrenceGroupId: $recurrenceGroupId')
           ..write(')'))
         .toString();
   }
@@ -530,6 +576,7 @@ class Task extends DataClass implements Insertable<Task> {
     alarmEnabled,
     subject,
     hasTime,
+    recurrenceGroupId,
   );
   @override
   bool operator ==(Object other) =>
@@ -546,7 +593,8 @@ class Task extends DataClass implements Insertable<Task> {
           other.iconKey == this.iconKey &&
           other.alarmEnabled == this.alarmEnabled &&
           other.subject == this.subject &&
-          other.hasTime == this.hasTime);
+          other.hasTime == this.hasTime &&
+          other.recurrenceGroupId == this.recurrenceGroupId);
 }
 
 class TasksCompanion extends UpdateCompanion<Task> {
@@ -562,6 +610,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
   final Value<bool> alarmEnabled;
   final Value<String?> subject;
   final Value<bool> hasTime;
+  final Value<String?> recurrenceGroupId;
   const TasksCompanion({
     this.id = const Value.absent(),
     this.title = const Value.absent(),
@@ -575,6 +624,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.alarmEnabled = const Value.absent(),
     this.subject = const Value.absent(),
     this.hasTime = const Value.absent(),
+    this.recurrenceGroupId = const Value.absent(),
   });
   TasksCompanion.insert({
     this.id = const Value.absent(),
@@ -589,6 +639,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.alarmEnabled = const Value.absent(),
     this.subject = const Value.absent(),
     this.hasTime = const Value.absent(),
+    this.recurrenceGroupId = const Value.absent(),
   }) : title = Value(title);
   static Insertable<Task> custom({
     Expression<int>? id,
@@ -603,6 +654,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Expression<bool>? alarmEnabled,
     Expression<String>? subject,
     Expression<bool>? hasTime,
+    Expression<String>? recurrenceGroupId,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -617,6 +669,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
       if (alarmEnabled != null) 'alarm_enabled': alarmEnabled,
       if (subject != null) 'subject': subject,
       if (hasTime != null) 'has_time': hasTime,
+      if (recurrenceGroupId != null) 'recurrence_group_id': recurrenceGroupId,
     });
   }
 
@@ -633,6 +686,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Value<bool>? alarmEnabled,
     Value<String?>? subject,
     Value<bool>? hasTime,
+    Value<String?>? recurrenceGroupId,
   }) {
     return TasksCompanion(
       id: id ?? this.id,
@@ -647,6 +701,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
       alarmEnabled: alarmEnabled ?? this.alarmEnabled,
       subject: subject ?? this.subject,
       hasTime: hasTime ?? this.hasTime,
+      recurrenceGroupId: recurrenceGroupId ?? this.recurrenceGroupId,
     );
   }
 
@@ -689,6 +744,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
     if (hasTime.present) {
       map['has_time'] = Variable<bool>(hasTime.value);
     }
+    if (recurrenceGroupId.present) {
+      map['recurrence_group_id'] = Variable<String>(recurrenceGroupId.value);
+    }
     return map;
   }
 
@@ -706,7 +764,8 @@ class TasksCompanion extends UpdateCompanion<Task> {
           ..write('iconKey: $iconKey, ')
           ..write('alarmEnabled: $alarmEnabled, ')
           ..write('subject: $subject, ')
-          ..write('hasTime: $hasTime')
+          ..write('hasTime: $hasTime, ')
+          ..write('recurrenceGroupId: $recurrenceGroupId')
           ..write(')'))
         .toString();
   }
@@ -2002,6 +2061,7 @@ typedef $$TasksTableCreateCompanionBuilder =
       Value<bool> alarmEnabled,
       Value<String?> subject,
       Value<bool> hasTime,
+      Value<String?> recurrenceGroupId,
     });
 typedef $$TasksTableUpdateCompanionBuilder =
     TasksCompanion Function({
@@ -2017,6 +2077,7 @@ typedef $$TasksTableUpdateCompanionBuilder =
       Value<bool> alarmEnabled,
       Value<String?> subject,
       Value<bool> hasTime,
+      Value<String?> recurrenceGroupId,
     });
 
 class $$TasksTableFilterComposer extends Composer<_$AppDatabase, $TasksTable> {
@@ -2084,6 +2145,11 @@ class $$TasksTableFilterComposer extends Composer<_$AppDatabase, $TasksTable> {
 
   ColumnFilters<bool> get hasTime => $composableBuilder(
     column: $table.hasTime,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get recurrenceGroupId => $composableBuilder(
+    column: $table.recurrenceGroupId,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -2156,6 +2222,11 @@ class $$TasksTableOrderingComposer
     column: $table.hasTime,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get recurrenceGroupId => $composableBuilder(
+    column: $table.recurrenceGroupId,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$TasksTableAnnotationComposer
@@ -2208,6 +2279,11 @@ class $$TasksTableAnnotationComposer
 
   GeneratedColumn<bool> get hasTime =>
       $composableBuilder(column: $table.hasTime, builder: (column) => column);
+
+  GeneratedColumn<String> get recurrenceGroupId => $composableBuilder(
+    column: $table.recurrenceGroupId,
+    builder: (column) => column,
+  );
 }
 
 class $$TasksTableTableManager
@@ -2250,6 +2326,7 @@ class $$TasksTableTableManager
                 Value<bool> alarmEnabled = const Value.absent(),
                 Value<String?> subject = const Value.absent(),
                 Value<bool> hasTime = const Value.absent(),
+                Value<String?> recurrenceGroupId = const Value.absent(),
               }) => TasksCompanion(
                 id: id,
                 title: title,
@@ -2263,6 +2340,7 @@ class $$TasksTableTableManager
                 alarmEnabled: alarmEnabled,
                 subject: subject,
                 hasTime: hasTime,
+                recurrenceGroupId: recurrenceGroupId,
               ),
           createCompanionCallback:
               ({
@@ -2278,6 +2356,7 @@ class $$TasksTableTableManager
                 Value<bool> alarmEnabled = const Value.absent(),
                 Value<String?> subject = const Value.absent(),
                 Value<bool> hasTime = const Value.absent(),
+                Value<String?> recurrenceGroupId = const Value.absent(),
               }) => TasksCompanion.insert(
                 id: id,
                 title: title,
@@ -2291,6 +2370,7 @@ class $$TasksTableTableManager
                 alarmEnabled: alarmEnabled,
                 subject: subject,
                 hasTime: hasTime,
+                recurrenceGroupId: recurrenceGroupId,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

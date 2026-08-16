@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../core/constants/task_icons.dart';
 import '../../../core/theme/app_radius.dart';
@@ -8,7 +10,10 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../domain/models/task_item.dart';
+import '../../../domain/models/academic_calendar_event.dart';
 import '../../blocs/tasks/tasks_cubit.dart';
+import '../../blocs/calendar/calendar_cubit.dart';
+import '../../blocs/calendar/calendar_state.dart';
 import '../../widgets/app_snack.dart';
 
 void showTaskFormSheet(
@@ -48,7 +53,18 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
   late String _iconKey;
   late bool _alarmEnabled;
 
+  // Repetitive logic
+  bool _isRepetitive = false;
+  final Set<int> _selectedDays = {};
+  DateTime? _recurrenceStartDate;
+  DateTime? _recurrenceEndDate;
+  
+  // Editing a series
+  bool _updateSeries = true;
+  DateTime? _updateSeriesUntil;
+
   bool get _isEditing => widget.task != null;
+  bool get _isPartOfSeries => _isEditing && widget.task?.recurrenceGroupId != null;
 
   @override
   void initState() {
@@ -64,6 +80,31 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
     _type = widget.task?.type ?? TaskType.tarea;
     _iconKey = widget.task?.iconKey ?? defaultTaskIconKey;
     _alarmEnabled = widget.task?.alarmEnabled ?? true;
+
+    if (!_isEditing) {
+      _recurrenceStartDate = DateTime.now();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isEditing && _recurrenceEndDate == null) {
+      _calculateDefaultEndDate();
+    }
+  }
+
+  void _calculateDefaultEndDate() {
+    final calendarState = context.read<CalendarCubit>().state;
+    if (calendarState is CalendarLoaded) {
+      final finCiclo = calendarState.events.where((e) => e.category == AcademicCalendarCategory.finCiclo).firstOrNull;
+      if (finCiclo != null && finCiclo.endDate.isAfter(DateTime.now())) {
+        _recurrenceEndDate = finCiclo.endDate;
+        return;
+      }
+    }
+    // Fallback: 6 months
+    _recurrenceEndDate = DateTime.now().add(const Duration(days: 180));
   }
 
   @override
@@ -74,27 +115,15 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
     super.dispose();
   }
 
-  Future<void> _pickDueDate() async {
+  Future<void> _pickDate({DateTime? initial, required void Function(DateTime) onPicked}) async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: _dueDate ?? DateTime.now(),
+      initialDate: initial ?? DateTime.now(),
       firstDate: DateTime.now().subtract(const Duration(days: 365)),
       lastDate: DateTime.now().add(const Duration(days: 365 * 3)),
     );
     if (picked != null) {
-      setState(() {
-        if (_dueDate != null) {
-          _dueDate = DateTime(
-            picked.year,
-            picked.month,
-            picked.day,
-            _dueDate!.hour,
-            _dueDate!.minute,
-          );
-        } else {
-          _dueDate = picked;
-        }
-      });
+      setState(() => onPicked(picked));
     }
   }
 
@@ -122,37 +151,95 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
     }
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
+    if (!_isEditing && _isRepetitive && _selectedDays.isEmpty) {
+      AppSnack.show(context, 'Selecciona al menos un día para la tarea repetitiva');
+      return;
+    }
+
     final subject = _subjectController.text.trim();
-    // Exámenes toman la materia como título.
     final title = _type == TaskType.examen ? subject : _titleController.text.trim();
     final description = _descriptionController.text.trim();
 
-    final taskToSave = TaskItem(
-      id: widget.task?.id,
-      title: title,
-      description: description.isEmpty ? null : description,
-      dueDate: _dueDate,
-      hasTime: _dueTime != null,
-      priority: _priority,
-      createdAt: widget.task?.createdAt ?? DateTime.now(),
-      type: _type,
-      iconKey: _iconKey,
-      alarmEnabled: _alarmEnabled,
-      subject: subject.isEmpty ? null : subject,
-      isCompleted: widget.task?.isCompleted ?? false,
-    );
-
     if (_isEditing) {
-      widget.cubit.updateTask(taskToSave);
+      final taskToSave = widget.task!.copyWith(
+        title: title,
+        description: description.isEmpty ? null : description,
+        dueDate: _dueDate,
+        hasTime: _dueTime != null,
+        priority: _priority,
+        type: _type,
+        iconKey: _iconKey,
+        alarmEnabled: _alarmEnabled,
+        subject: subject.isEmpty ? null : subject,
+      );
+
+      if (_isPartOfSeries && _updateSeries) {
+        await widget.cubit.updateRepetitiveTaskSeries(taskToSave, widget.task!.dueDate!, untilDate: _updateSeriesUntil);
+        AppSnack.success(context, 'Serie actualizada exitosamente');
+      } else {
+        await widget.cubit.updateTask(taskToSave);
+        AppSnack.success(context, 'Actualizada exitosamente');
+      }
     } else {
-      widget.cubit.addTask(taskToSave);
+      if (_isRepetitive && _recurrenceStartDate != null && _recurrenceEndDate != null) {
+        final groupId = const Uuid().v4();
+        final List<TaskItem> generatedTasks = [];
+        DateTime current = _recurrenceStartDate!;
+        
+        while (current.isBefore(_recurrenceEndDate!) || current.isAtSameMomentAs(_recurrenceEndDate!)) {
+          if (_selectedDays.contains(current.weekday)) {
+            DateTime taskDueDate = current;
+            if (_dueTime != null) {
+              taskDueDate = DateTime(current.year, current.month, current.day, _dueTime!.hour, _dueTime!.minute);
+            }
+            generatedTasks.add(TaskItem(
+              title: title,
+              description: description.isEmpty ? null : description,
+              dueDate: taskDueDate,
+              hasTime: _dueTime != null,
+              priority: _priority,
+              createdAt: DateTime.now(),
+              type: _type,
+              iconKey: _iconKey,
+              alarmEnabled: _alarmEnabled,
+              subject: subject.isEmpty ? null : subject,
+              recurrenceGroupId: groupId,
+            ));
+          }
+          current = current.add(const Duration(days: 1));
+        }
+
+        if (generatedTasks.isEmpty) {
+          AppSnack.show(context, 'No hay días que coincidan en el rango seleccionado');
+          return;
+        }
+
+        await widget.cubit.addRepetitiveTasks(generatedTasks);
+        AppSnack.success(context, '${generatedTasks.length} tareas creadas');
+      } else {
+        final taskToSave = TaskItem(
+          title: title,
+          description: description.isEmpty ? null : description,
+          dueDate: _dueDate,
+          hasTime: _dueTime != null,
+          priority: _priority,
+          createdAt: DateTime.now(),
+          type: _type,
+          iconKey: _iconKey,
+          alarmEnabled: _alarmEnabled,
+          subject: subject.isEmpty ? null : subject,
+        );
+        await widget.cubit.addTask(taskToSave);
+        AppSnack.success(context, 'Guardada exitosamente');
+      }
     }
 
-    Navigator.of(context).pop();
-    AppSnack.success(context, _isEditing ? 'Actualizada exitosamente' : 'Guardada exitosamente');
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
   void _delete() {
@@ -270,45 +357,184 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
                   ],
                 ),
               ),
-              Row(
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: OutlinedButton.icon(
-                      onPressed: _pickDueDate,
-                      icon: const Icon(Symbols.event_rounded, size: AppIconSize.sm),
-                      label: Text(
-                        _dueDate == null
-                            ? (isExam ? 'Fecha del examen' : 'Fecha límite')
-                            : DateFormat("d MMM, y", 'es_MX').format(_dueDate!),
-                      ),
-                    ),
+
+              if (!_isEditing && !isExam) ...[
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Hacer repetitiva'),
+                  value: _isRepetitive,
+                  onChanged: (value) => setState(() => _isRepetitive = value),
+                ),
+                const SizedBox(height: AppSpacing.md),
+              ],
+
+              if (_isPartOfSeries) ...[
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  decoration: BoxDecoration(
+                    color: colorScheme.secondaryContainer.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                   ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    flex: 2,
-                    child: OutlinedButton.icon(
-                      onPressed: _pickDueTime,
-                      icon: const Icon(Symbols.schedule_rounded, size: AppIconSize.sm),
-                      label: Text(
-                        _dueTime == null ? 'Hora' : _dueTime!.format(context),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Symbols.event_repeat_rounded, size: AppIconSize.sm, color: colorScheme.onSecondaryContainer),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: Text(
+                              'Tarea Repetitiva',
+                              style: theme.textTheme.labelMedium?.copyWith(color: colorScheme.onSecondaryContainer),
+                            ),
+                          ),
+                          Switch(
+                            value: _updateSeries,
+                            onChanged: (val) => setState(() => _updateSeries = val),
+                          )
+                        ],
                       ),
-                    ),
+                      if (_updateSeries) ...[
+                        Text(
+                          'Los cambios aplicarán para esta tarea y todas las futuras de este día en la serie.',
+                          style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSecondaryContainer),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        OutlinedButton.icon(
+                          onPressed: () => _pickDate(
+                            initial: _updateSeriesUntil,
+                            onPicked: (d) => _updateSeriesUntil = d,
+                          ),
+                          icon: const Icon(Symbols.calendar_month_rounded, size: AppIconSize.sm),
+                          label: Text(_updateSeriesUntil == null ? 'Cambiar hasta... (Infinito)' : 'Hasta el ${DateFormat("d MMM, y", 'es_MX').format(_updateSeriesUntil!)}'),
+                        ),
+                        if (_updateSeriesUntil != null)
+                          TextButton(
+                            onPressed: () => setState(() => _updateSeriesUntil = null),
+                            child: const Text('Quitar límite'),
+                          )
+                      ] else ...[
+                        Text(
+                          'Solo se actualizará este evento individual.',
+                          style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSecondaryContainer),
+                        ),
+                      ]
+                    ],
                   ),
-                  if (_dueDate != null || _dueTime != null) ...[
-                    const SizedBox(width: AppSpacing.xs),
-                    IconButton(
-                      onPressed: () {
-                        setState(() {
-                          _dueDate = null;
-                          _dueTime = null;
-                        });
-                      },
-                      icon: const Icon(Symbols.close_rounded),
-                      tooltip: 'Limpiar fecha',
-                    ),
-                  ],
-                ],
+                ),
+                const SizedBox(height: AppSpacing.md),
+              ],
+
+              AnimatedSize(
+                duration: AppMotion.normal,
+                curve: AppMotion.standard,
+                child: _isRepetitive && !_isEditing
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text('Días de la semana', style: theme.textTheme.meta?.copyWith(color: colorScheme.onSurfaceVariant)),
+                          const SizedBox(height: AppSpacing.sm),
+                          Wrap(
+                            spacing: AppSpacing.sm,
+                            children: [
+                              for (var i = 1; i <= 7; i++)
+                                FilterChip(
+                                  label: Text(['L', 'M', 'X', 'J', 'V', 'S', 'D'][i - 1]),
+                                  selected: _selectedDays.contains(i),
+                                  onSelected: (selected) {
+                                    setState(() {
+                                      if (selected) {
+                                        _selectedDays.add(i);
+                                      } else {
+                                        _selectedDays.remove(i);
+                                      }
+                                    });
+                                  },
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () => _pickDate(initial: _recurrenceStartDate, onPicked: (d) {
+                                    _recurrenceStartDate = d;
+                                    if (_recurrenceEndDate != null && d.isAfter(_recurrenceEndDate!)) {
+                                      _recurrenceEndDate = d.add(const Duration(days: 1));
+                                    }
+                                  }),
+                                  child: Text(_recurrenceStartDate == null ? 'Inicio' : DateFormat("d MMM", 'es_MX').format(_recurrenceStartDate!)),
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () => _pickDate(initial: _recurrenceEndDate, onPicked: (d) {
+                                    _recurrenceEndDate = d;
+                                    if (_recurrenceStartDate != null && d.isBefore(_recurrenceStartDate!)) {
+                                      _recurrenceStartDate = d.subtract(const Duration(days: 1));
+                                    }
+                                  }),
+                                  child: Text(_recurrenceEndDate == null ? 'Fin' : DateFormat("d MMM", 'es_MX').format(_recurrenceEndDate!)),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          OutlinedButton.icon(
+                            onPressed: _pickDueTime,
+                            icon: const Icon(Symbols.schedule_rounded, size: AppIconSize.sm),
+                            label: Text(_dueTime == null ? 'Hora (Opcional)' : _dueTime!.format(context)),
+                          ),
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          Expanded(
+                            flex: 3,
+                            child: OutlinedButton.icon(
+                              onPressed: () => _pickDate(initial: _dueDate, onPicked: (d) {
+                                if (_dueDate != null) {
+                                  _dueDate = DateTime(d.year, d.month, d.day, _dueDate!.hour, _dueDate!.minute);
+                                } else {
+                                  _dueDate = d;
+                                }
+                              }),
+                              icon: const Icon(Symbols.event_rounded, size: AppIconSize.sm),
+                              label: Text(
+                                _dueDate == null
+                                    ? (isExam ? 'Fecha del examen' : 'Fecha límite')
+                                    : DateFormat("d MMM, y", 'es_MX').format(_dueDate!),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            flex: 2,
+                            child: OutlinedButton.icon(
+                              onPressed: _pickDueTime,
+                              icon: const Icon(Symbols.schedule_rounded, size: AppIconSize.sm),
+                              label: Text(
+                                _dueTime == null ? 'Hora' : _dueTime!.format(context),
+                              ),
+                            ),
+                          ),
+                          if (_dueDate != null || _dueTime != null) ...[
+                            const SizedBox(width: AppSpacing.xs),
+                            IconButton(
+                              onPressed: () {
+                                setState(() {
+                                  _dueDate = null;
+                                  _dueTime = null;
+                                });
+                              },
+                              icon: const Icon(Symbols.close_rounded),
+                              tooltip: 'Limpiar fecha',
+                            ),
+                          ],
+                        ],
+                      ),
               ),
               const SizedBox(height: AppSpacing.md),
               Text('Prioridad',
