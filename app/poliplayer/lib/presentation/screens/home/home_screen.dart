@@ -21,6 +21,7 @@ import '../../widgets/section_header.dart';
 import '../../widgets/skeleton.dart';
 import '../../widgets/stale_data_banner.dart';
 import '../../widgets/status_view.dart';
+import '../../widgets/animated_entrance.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -47,42 +48,59 @@ class _HomeView extends StatelessWidget {
     final today = DateTime.now();
 
     return Scaffold(
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () => context.read<ScheduleCubit>().loadSchedule(force: true),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.lg,
-              AppSpacing.lg,
-              AppSpacing.xxl,
-            ),
-            children: [
-              // Encabezado propio en vez de AppBar: en la pantalla de inicio el
-              // saludo *es* el título, y una barra encima sólo lo repetiría.
-              Text(
+      body: RefreshIndicator(
+        onRefresh: () => context.read<ScheduleCubit>().loadSchedule(force: true),
+        child: CustomScrollView(
+          slivers: [
+            SliverAppBar.large(
+              title: Text(
                 _greeting(today),
                 style: theme.textTheme.heroTitle?.copyWith(color: colorScheme.onSurface),
               ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                _capitalize(DateFormat("EEEE d 'de' MMMM", 'es_MX').format(today)),
-                style: theme.textTheme.body?.copyWith(color: colorScheme.onSurfaceVariant),
+              backgroundColor: colorScheme.surface,
+              scrolledUnderElevation: 0,
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                0, // El AppBar ya provee espaciado superior
+                AppSpacing.lg,
+                AppSpacing.xxl,
               ),
-              const SizedBox(height: AppSpacing.xl),
-              _NextClassCard(today: today),
-              const SizedBox(height: AppSpacing.xl),
-              const SectionHeader(title: 'Clases de hoy'),
-              _TodayScheduleSection(today: today),
-              const SizedBox(height: AppSpacing.xl),
-              SectionHeader(
-                title: 'Tareas pendientes',
-                actionLabel: 'Ver todas',
-                onAction: () => context.go('/tasks'),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  AnimatedEntrance(
+                    index: 0,
+                    child: Text(
+                      _capitalize(DateFormat("EEEE d 'de' MMMM", 'es_MX').format(today)),
+                      style: theme.textTheme.body?.copyWith(color: colorScheme.onSurfaceVariant),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  AnimatedEntrance(
+                    index: 1,
+                    child: _NextClassCard(today: today),
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  const AnimatedEntrance(
+                    index: 2,
+                    child: SectionHeader(title: 'Clases de hoy'),
+                  ),
+                  _TodayScheduleSection(today: today, startIndex: 3),
+                  const SizedBox(height: AppSpacing.xl),
+                  AnimatedEntrance(
+                    index: 4,
+                    child: SectionHeader(
+                      title: 'Tareas pendientes',
+                      actionLabel: 'Ver todas',
+                      onAction: () => context.go('/tasks'),
+                    ),
+                  ),
+                  _PendingTasksSection(today: today, startIndex: 5),
+                ]),
               ),
-              _PendingTasksSection(today: today),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -125,10 +143,6 @@ DateTime? _timeOn(DateTime day, String time) {
   return DateTime(day.year, day.month, day.day, hour, minute);
 }
 
-/// Tarjeta destacada con la clase en curso o la siguiente del día.
-///
-/// Es la información que más se consulta al abrir la app, así que va arriba y
-/// con más peso visual que la lista completa.
 class _NextClassCard extends StatelessWidget {
   final DateTime today;
 
@@ -146,7 +160,6 @@ class _NextClassCard extends StatelessWidget {
         final sessions = _todaySessions(state.entries, today);
         if (sessions.isEmpty) return const SizedBox.shrink();
 
-        // En curso: la que ya empezó y no ha terminado. Si no hay, la próxima.
         (ScheduleEntry, ScheduleSession)? current;
         (ScheduleEntry, ScheduleSession)? next;
         for (final item in sessions) {
@@ -173,6 +186,7 @@ class _NextClassCard extends StatelessWidget {
         return AppCard(
           emphasized: true,
           padding: const EdgeInsets.all(AppSpacing.lg),
+          onTap: () => context.go('/schedule'), // Hace que reaccione al toque con animación
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -225,8 +239,9 @@ class _NextClassCard extends StatelessWidget {
 
 class _TodayScheduleSection extends StatelessWidget {
   final DateTime today;
+  final int startIndex;
 
-  const _TodayScheduleSection({required this.today});
+  const _TodayScheduleSection({required this.today, required this.startIndex});
 
   @override
   Widget build(BuildContext context) {
@@ -238,39 +253,52 @@ class _TodayScheduleSection extends StatelessWidget {
             return const SkeletonList(itemCount: 2);
 
           case ScheduleError():
-            return InlineStatus(
-              icon: Symbols.cloud_off_rounded,
-              message: 'No se pudo cargar tu horario.',
-              actionLabel: 'Reintentar',
-              onAction: () => context.read<ScheduleCubit>().loadSchedule(force: true),
+            return AnimatedEntrance(
+              index: startIndex,
+              child: InlineStatus(
+                icon: Symbols.cloud_off_rounded,
+                message: 'No se pudo cargar tu horario.',
+                actionLabel: 'Reintentar',
+                onAction: () => context.read<ScheduleCubit>().loadSchedule(force: true),
+              ),
             );
 
           case ScheduleLoaded(:final entries, :final fetchedAt, :final fromCache):
             final sessions = _todaySessions(entries, today);
             if (sessions.isEmpty) {
-              return const InlineStatus(
-                icon: Symbols.beach_access_rounded,
-                message: 'Hoy no tienes clases.',
+              return AnimatedEntrance(
+                index: startIndex,
+                child: const InlineStatus(
+                  icon: Symbols.beach_access_rounded,
+                  message: 'Hoy no tienes clases.',
+                ),
               );
             }
 
             return Column(
               children: [
                 if (fromCache) ...[
-                  StaleDataBanner(fetchedAt: fetchedAt),
+                  AnimatedEntrance(
+                    index: startIndex,
+                    child: StaleDataBanner(fetchedAt: fetchedAt),
+                  ),
                   const SizedBox(height: AppSpacing.sm),
                 ],
-                for (final (entry, session) in sessions) ...[
-                  AppCard(
-                    padding: EdgeInsets.zero,
-                    child: AppListRow(
-                      leading: _TimeChip(time: session.startTime),
-                      title: entry.subject,
-                      subtitle: [
-                        '${session.startTime} - ${session.endTime}',
-                        if (session.classroom != null)
-                          '${session.building ?? ''} ${session.classroom}'.trim(),
-                      ].join('  ·  '),
+                for (var i = 0; i < sessions.length; i++) ...[
+                  AnimatedEntrance(
+                    index: startIndex + (fromCache ? 1 : 0) + i,
+                    child: AppCard(
+                      padding: EdgeInsets.zero,
+                      onTap: () => context.go('/schedule'),
+                      child: AppListRow(
+                        leading: _TimeChip(time: sessions[i].$2.startTime),
+                        title: sessions[i].$1.subject,
+                        subtitle: [
+                          '${sessions[i].$2.startTime} - ${sessions[i].$2.endTime}',
+                          if (sessions[i].$2.classroom != null)
+                            '${sessions[i].$2.building ?? ''} ${sessions[i].$2.classroom}'.trim(),
+                        ].join('  ·  '),
+                      ),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
@@ -283,9 +311,6 @@ class _TodayScheduleSection extends StatelessWidget {
   }
 }
 
-/// Hora de inicio como bloque, en vez de un ícono genérico de calendario
-/// repetido en todas las filas: en una lista de clases el dato que distingue
-/// una fila de otra es la hora.
 class _TimeChip extends StatelessWidget {
   final String time;
 
@@ -317,8 +342,9 @@ class _TimeChip extends StatelessWidget {
 
 class _PendingTasksSection extends StatelessWidget {
   final DateTime today;
+  final int startIndex;
 
-  const _PendingTasksSection({required this.today});
+  const _PendingTasksSection({required this.today, required this.startIndex});
 
   @override
   Widget build(BuildContext context) {
@@ -336,30 +362,36 @@ class _PendingTasksSection extends StatelessWidget {
           ..sort((a, b) => a.dueDate!.compareTo(b.dueDate!));
 
         if (pending.isEmpty) {
-          return const InlineStatus(
-            icon: Symbols.check_circle_rounded,
-            message: 'Nada pendiente para hoy.',
+          return AnimatedEntrance(
+            index: startIndex,
+            child: const InlineStatus(
+              icon: Symbols.check_circle_rounded,
+              message: 'Nada pendiente para hoy.',
+            ),
           );
         }
 
         return Column(
           children: [
-            for (final task in pending) ...[
-              AppCard(
-                padding: EdgeInsets.zero,
-                onTap: () => context.go('/tasks'),
-                child: AppListRow(
-                  icon: task.dueDate!.isBefore(startOfToday)
-                      ? Symbols.warning_rounded
-                      : Symbols.task_alt_rounded,
-                  iconColor: task.dueDate!.isBefore(startOfToday)
-                      ? colorScheme.error
-                      : colorScheme.primary,
-                  title: task.title,
-                  subtitle: task.dueDate!.isBefore(startOfToday)
-                      ? 'Venció el ${DateFormat('d MMM', 'es_MX').format(task.dueDate!)}'
-                      : 'Vence hoy',
-                  trailing: PriorityFlag(priority: task.priority),
+            for (var i = 0; i < pending.length; i++) ...[
+              AnimatedEntrance(
+                index: startIndex + i,
+                child: AppCard(
+                  padding: EdgeInsets.zero,
+                  onTap: () => context.go('/tasks'),
+                  child: AppListRow(
+                    icon: pending[i].dueDate!.isBefore(startOfToday)
+                        ? Symbols.warning_rounded
+                        : Symbols.task_alt_rounded,
+                    iconColor: pending[i].dueDate!.isBefore(startOfToday)
+                        ? colorScheme.error
+                        : colorScheme.primary,
+                    title: pending[i].title,
+                    subtitle: pending[i].dueDate!.isBefore(startOfToday)
+                        ? 'Venció el ${DateFormat('d MMM', 'es_MX').format(pending[i].dueDate!)}'
+                        : 'Vence hoy',
+                    trailing: PriorityFlag(priority: pending[i].priority),
+                  ),
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),

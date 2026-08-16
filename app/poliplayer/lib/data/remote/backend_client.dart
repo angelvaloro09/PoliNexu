@@ -360,18 +360,25 @@ extension AcademicStatusDtoJson on AcademicStatusDto {
 class ReinscriptionCreditItemDto {
   final String description;
   final String credits;
+  final bool isTotal;
 
-  ReinscriptionCreditItemDto({required this.description, required this.credits});
+  ReinscriptionCreditItemDto({
+    required this.description,
+    required this.credits,
+    this.isTotal = false,
+  });
 
   factory ReinscriptionCreditItemDto.fromJson(Map<String, dynamic> json) =>
       ReinscriptionCreditItemDto(
         description: json['description'] as String,
         credits: json['credits'] as String,
+        isTotal: json['is_total'] as bool? ?? false,
       );
 }
 
 extension ReinscriptionCreditItemDtoJson on ReinscriptionCreditItemDto {
-  Map<String, dynamic> toJson() => {'description': description, 'credits': credits};
+  Map<String, dynamic> toJson() =>
+      {'description': description, 'credits': credits, 'is_total': isTotal};
 }
 
 class ReinscriptionDto {

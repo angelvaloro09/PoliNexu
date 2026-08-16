@@ -207,6 +207,15 @@ class _FakeNotificationService implements NotificationService {
 
   @override
   Future<void> scheduleAcademicCalendarNotifications(List<AcademicCalendarEvent> events) async {}
+
+  @override
+  Future<void> notifySessionExpired() async {}
+
+  @override
+  Future<void> clearSessionExpiredNotice() async {}
+
+  @override
+  Future<void> scheduleReinscriptionReminder(DateTime citaInicio) async {}
 }
 
 void main() {

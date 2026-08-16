@@ -33,10 +33,18 @@ def _parse_subject_table(table) -> list[dict]:
         if len(cells) < 4:
             continue
 
+        code_cell = cells[0].get_text(strip=True)
         raw_subject = cells[1].get_text(strip=True)
+        # Fila espuria: encabezado real + primera fila de datos pegados en una
+        # sola celda sin separadores (ver docstring del módulo). Se distingue
+        # de una fila real porque el "código" queda absurdamente largo o el
+        # "nombre de materia" es sólo un número (el semestre, no un título).
+        if len(code_cell) > 20 or raw_subject.isdigit():
+            continue
+
         entries.append(
             {
-                "code": extract_subject_code(raw_subject) or cells[0].get_text(strip=True),
+                "code": extract_subject_code(raw_subject) or code_cell,
                 "subject": normalize_subject(raw_subject),
                 "period": cells[2].get_text(strip=True),
                 "times": cells[3].get_text(strip=True),

@@ -127,8 +127,8 @@ def main() -> None:
         # dentro de una ventana circular que recorta como el ícono adaptativo
         # (hasta 33% del borde) — mismo inset que `icon_foreground.png`, si no
         # el trazo queda cortado por el círculo.
-        "splash_light.png": dict(size=512, fg=BRAND_BLUE, bg=TRANSPARENT, inset=0.52),
-        "splash_dark.png": dict(size=512, fg=BRAND_BLUE_DARK, bg=TRANSPARENT, inset=0.52),
+        "splash_light.png": dict(size=512, fg=BRAND_BLUE, bg=TRANSPARENT, inset=0.38),
+        "splash_dark.png": dict(size=512, fg=BRAND_BLUE_DARK, bg=TRANSPARENT, inset=0.38),
     }
 
     for name, kwargs in outputs.items():

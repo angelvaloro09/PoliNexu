@@ -355,10 +355,23 @@ class _ReinscriptionContent extends StatelessWidget {
                 horizontal: AppSpacing.lg,
                 vertical: AppSpacing.sm,
               ),
+              emphasized: item.isTotal,
               child: Row(
                 children: [
-                  Expanded(child: Text(item.description, style: theme.textTheme.bodySecondary)),
-                  Text(item.credits, style: theme.textTheme.cardTitle),
+                  Expanded(
+                    child: Text(
+                      item.description,
+                      style: item.isTotal
+                          ? theme.textTheme.cardTitle
+                          : theme.textTheme.bodySecondary,
+                    ),
+                  ),
+                  Text(
+                    item.credits,
+                    style: theme.textTheme.cardTitle?.copyWith(
+                      color: item.isTotal ? colorScheme.primary : null,
+                    ),
+                  ),
                 ],
               ),
             ),

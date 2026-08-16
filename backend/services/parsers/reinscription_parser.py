@@ -15,6 +15,21 @@ from datetime import datetime
 
 from bs4 import BeautifulSoup
 
+from .text_normalize import normalize_subject
+
+# El SAES envuelve la fila de total en marcadores "-z-" ("-z- TOTAL DE
+# CREDITOS DE REPROBADAS -z-") — puramente decorativo en el HTML de origen,
+# nunca debe llegar así a la UI.
+_TOTAL_MARKER_RE = re.compile(r"-\s*z\s*-", re.IGNORECASE)
+
+
+def _clean_breakdown_description(text: str) -> tuple[str, bool]:
+    stripped = _TOTAL_MARKER_RE.sub("", text).strip()
+    if "total" in stripped.lower():
+        return "Total de créditos reprobados", True
+    return normalize_subject(stripped), False
+
+
 # "12/08/2026 09:20:00 a. m." / "03:20:00 p. m." — sin depender del locale del
 # sistema para %p, que en Windows/es-MX no siempre reconoce "a. m."/"p. m.".
 _DATETIME_RE = re.compile(
@@ -99,10 +114,12 @@ def parse_reinscription(html: str) -> dict:
             cells = row.find_all("td")
             if len(cells) < 2:
                 continue
+            description, is_total = _clean_breakdown_description(cells[0].get_text(strip=True))
             breakdown.append(
                 {
-                    "description": cells[0].get_text(strip=True),
+                    "description": description,
                     "credits": cells[1].get_text(strip=True),
+                    "is_total": is_total,
                 }
             )
 

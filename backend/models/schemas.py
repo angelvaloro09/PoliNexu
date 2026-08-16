@@ -165,6 +165,7 @@ class AcademicStatusResponse(BaseModel):
 class ReinscriptionCreditItem(BaseModel):
     description: str
     credits: str
+    is_total: bool = False
 
 
 class ReinscriptionResponse(BaseModel):

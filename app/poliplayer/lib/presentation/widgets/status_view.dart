@@ -84,13 +84,27 @@ class StatusView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.10),
-                borderRadius: AppRadius.lgAll,
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: 1.0),
+              duration: AppMotion.slow,
+              curve: AppMotion.emphasized,
+              builder: (context, value, child) {
+                return Transform.scale(
+                  scale: 0.8 + (0.2 * value),
+                  child: Opacity(
+                    opacity: value,
+                    child: child,
+                  ),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.10),
+                  borderRadius: AppRadius.lgAll,
+                ),
+                child: Icon(icon, size: AppIconSize.lg, color: accent),
               ),
-              child: Icon(icon, size: AppIconSize.lg, color: accent),
             ),
             const SizedBox(height: AppSpacing.lg),
             Text(

@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/theme/app_motion.dart';
 
 /// Tarjeta de contenido con el padding y el radio de la app.
 ///
-/// El `cardTheme` define color, radio y elevación, pero cada pantalla seguía
-/// envolviendo su contenido en un `Padding` propio y pisando el `margin` del
-/// theme con valores distintos. Esto lo resuelve en un solo lugar; el espacio
-/// **entre** tarjetas lo pone la lista (`separatorBuilder`), no la tarjeta.
-class AppCard extends StatelessWidget {
+/// Añade una micro-interacción de escalado ("hundimiento") al presionarse si
+/// tiene definido un [onTap].
+class AppCard extends StatefulWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
   final VoidCallback? onTap;
@@ -30,42 +29,87 @@ class AppCard extends StatelessWidget {
   });
 
   @override
+  State<AppCard> createState() => _AppCardState();
+}
+
+class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
+  late final AnimationController _scaleController;
+  late final Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _scaleController = AnimationController(
+      vsync: this,
+      duration: AppMotion.fast,
+      reverseDuration: AppMotion.fast,
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.98).animate(
+      CurvedAnimation(
+        parent: _scaleController,
+        curve: AppMotion.standard,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _scaleController.dispose();
+    super.dispose();
+  }
+
+  void _handleTapDown(TapDownDetails details) {
+    if (widget.onTap != null) _scaleController.forward();
+  }
+
+  void _handleTapUp(TapUpDetails details) {
+    if (widget.onTap != null) _scaleController.reverse();
+  }
+
+  void _handleTapCancel() {
+    if (widget.onTap != null) _scaleController.reverse();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    Widget content = Padding(padding: padding, child: child);
+    Widget content = Padding(padding: widget.padding, child: widget.child);
 
-    if (accentColor != null) {
-      // `IntrinsicHeight` es necesario: esta tarjeta vive dentro de listas
-      // (Sliver/ListView) que dan altura no acotada (maxHeight=infinity) a
-      // sus hijos. `crossAxisAlignment.stretch` intenta forzar esa altura a
-      // la barra de acento de 4px, y un `Container` de solo ancho no puede
-      // resolver una altura infinita — crashea con "BoxConstraints forces an
-      // infinite height". `IntrinsicHeight` mide primero la altura real del
-      // contenido y se la pasa al `Row` como una altura acotada normal.
+    if (widget.accentColor != null) {
       content = IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(width: 4, color: accentColor),
+            Container(width: 4, color: widget.accentColor),
             Expanded(child: content),
           ],
         ),
       );
     }
 
-    return Card(
-      color: emphasized ? colorScheme.secondaryContainer : null,
+    final card = Card(
+      color: widget.emphasized ? colorScheme.secondaryContainer : null,
       shape: RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
-      child: onTap == null
+      child: widget.onTap == null
           ? content
           : InkWell(
-              onTap: onTap,
-              // El `clipBehavior: antiAlias` de la Card recorta la tinta al
-              // radio; sin esto el ripple se pinta cuadrado en las esquinas.
+              onTap: widget.onTap,
+              onTapDown: _handleTapDown,
+              onTapUp: _handleTapUp,
+              onTapCancel: _handleTapCancel,
               borderRadius: AppRadius.lgAll,
               child: content,
             ),
+    );
+
+    if (widget.onTap == null) {
+      return card;
+    }
+
+    return ScaleTransition(
+      scale: _scaleAnimation,
+      child: card,
     );
   }
 }

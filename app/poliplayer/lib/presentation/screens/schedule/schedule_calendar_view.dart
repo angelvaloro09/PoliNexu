@@ -14,8 +14,7 @@ import '../../../domain/models/schedule_entry.dart';
 import '../../../domain/models/task_item.dart';
 import '../../blocs/calendar/calendar_cubit.dart';
 import '../../blocs/calendar/calendar_state.dart';
-import '../../blocs/reinscription/reinscription_cubit.dart';
-import '../../blocs/reinscription/reinscription_state.dart';
+
 import '../../blocs/schedule/schedule_cubit.dart';
 import '../../blocs/schedule/schedule_state.dart';
 import '../../blocs/tasks/tasks_cubit.dart';

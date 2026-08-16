@@ -80,7 +80,13 @@ class ReinscriptionRepositoryImpl implements ReinscriptionRepository {
         periodsAvailable: dto.periodsAvailable,
         authorizedLoad: dto.authorizedLoad,
         failedCreditsBreakdown: dto.failedCreditsBreakdown
-            .map((e) => ReinscriptionCreditItem(description: e.description, credits: e.credits))
+            .map(
+              (e) => ReinscriptionCreditItem(
+                description: e.description,
+                credits: e.credits,
+                isTotal: e.isTotal,
+              ),
+            )
             .toList(),
       );
 }

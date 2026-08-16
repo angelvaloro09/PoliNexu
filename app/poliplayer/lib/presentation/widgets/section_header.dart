@@ -33,7 +33,7 @@ class SectionHeader extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Row(
         children: [
-          Flexible(
+          Expanded(
             child: Text(
               count != null ? '$title:' : title,
               overflow: TextOverflow.ellipsis,
@@ -49,7 +49,6 @@ class SectionHeader extends StatelessWidget {
               ),
             ),
           ],
-          const Spacer(),
           if (onAction != null && actionLabel != null)
             TextButton(onPressed: onAction, child: Text(actionLabel!)),
         ],

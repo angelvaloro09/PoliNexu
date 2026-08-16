@@ -1,8 +1,13 @@
 class ReinscriptionCreditItem {
   final String description;
   final String credits;
+  final bool isTotal;
 
-  const ReinscriptionCreditItem({required this.description, required this.credits});
+  const ReinscriptionCreditItem({
+    required this.description,
+    required this.credits,
+    this.isTotal = false,
+  });
 }
 
 /// Datos de `fichas_reinscripcion.aspx`: la cita de reinscripción del alumno

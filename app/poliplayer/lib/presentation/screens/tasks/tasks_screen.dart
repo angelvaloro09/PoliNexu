@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -8,6 +9,7 @@ import '../../../core/di/injection.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/app_motion.dart';
 import '../../../domain/models/task_item.dart';
 import '../../blocs/schedule/schedule_cubit.dart';
 import '../../blocs/schedule/schedule_state.dart';
@@ -19,21 +21,15 @@ import '../../widgets/app_snack.dart';
 import '../../widgets/priority_flag.dart';
 import '../../widgets/skeleton.dart';
 import '../../widgets/status_view.dart';
+import '../../widgets/animated_entrance.dart';
 import 'task_form_sheet.dart';
 
-/// Materias del horario actual, para el autocompletado del formulario de
-/// tareas. `ScheduleCubit` es un singleton de `getIt` (ver injection.dart) —
-/// se lee directo su estado en vez de proveerlo aquí, esta pantalla no
-/// necesita reaccionar a sus cambios, sólo tomar una foto al abrir el form.
 List<String> _scheduleSubjects() {
   final state = getIt<ScheduleCubit>().state;
   if (state is! ScheduleLoaded) return const [];
   return state.entries.map((e) => e.subject).toSet().toList()..sort();
 }
 
-/// El calendario (clases + tareas + calendario IPN) vive ahora en la pantalla
-/// Horario (`schedule_screen.dart`, vista "Calendario") — esta pantalla sólo
-/// es la lista de tareas.
 class TasksScreen extends StatelessWidget {
   const TasksScreen({super.key});
 
@@ -46,21 +42,62 @@ class TasksScreen extends StatelessWidget {
   }
 }
 
-class _TasksView extends StatelessWidget {
+class _TasksView extends StatefulWidget {
   const _TasksView();
 
   @override
+  State<_TasksView> createState() => _TasksViewState();
+}
+
+class _TasksViewState extends State<_TasksView> {
+  bool _isFabVisible = true;
+
+  @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Tareas')),
-      // Extendido: en la vista de lista el botón principal merece etiqueta,
-      // y el ícono solo obligaba a adivinar qué crea.
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showTaskFormSheet(context, cubit: context.read<TasksCubit>(), subjectOptions: _scheduleSubjects()),
-        icon: const Icon(Symbols.add_rounded),
-        label: const Text('Nueva tarea'),
+      floatingActionButton: AnimatedSlide(
+        duration: AppMotion.fast,
+        curve: AppMotion.standard,
+        offset: _isFabVisible ? Offset.zero : const Offset(0, 2),
+        child: AnimatedOpacity(
+          duration: AppMotion.fast,
+          curve: AppMotion.standard,
+          opacity: _isFabVisible ? 1.0 : 0.0,
+          child: FloatingActionButton.extended(
+            onPressed: () => showTaskFormSheet(
+              context,
+              cubit: context.read<TasksCubit>(),
+              subjectOptions: _scheduleSubjects(),
+            ),
+            icon: const Icon(Symbols.add_rounded),
+            label: const Text('Nueva tarea'),
+          ),
+        ),
       ),
-      body: const _TaskListView(),
+      body: NotificationListener<UserScrollNotification>(
+        onNotification: (notification) {
+          if (notification.direction == ScrollDirection.forward) {
+            if (!_isFabVisible) setState(() => _isFabVisible = true);
+          } else if (notification.direction == ScrollDirection.reverse) {
+            if (_isFabVisible) setState(() => _isFabVisible = false);
+          }
+          return false;
+        },
+        child: CustomScrollView(
+          slivers: [
+            SliverAppBar.large(
+              title: Text('Tareas', style: theme.textTheme.heroTitle),
+              backgroundColor: theme.colorScheme.surface,
+              scrolledUnderElevation: 0,
+            ),
+            const SliverToBoxAdapter(
+              child: _TaskListView(),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -77,18 +114,24 @@ class _TaskListView extends StatelessWidget {
               padding: EdgeInsets.all(AppSpacing.lg),
               child: SkeletonList(itemCount: 4),
             ),
-          TasksError(:final message) => StatusView.error(
-              message: message,
-              // La lista viene de un Stream de Drift que ya está roto en este
-              // punto — no hay nada que reintentar sin reiniciar la app.
-              onRetry: () => AppSnack.error(context, 'Reinicia la app para continuar.'),
+          TasksError(:final message) => AnimatedEntrance(
+              child: StatusView.error(
+                message: message,
+                onRetry: () => AppSnack.error(context, 'Reinicia la app para continuar.'),
+              ),
             ),
-          TasksLoaded(:final tasks) when tasks.isEmpty => StatusView.empty(
-              icon: Symbols.task_alt_rounded,
-              title: 'Sin tareas',
-              message: 'Anota entregas, exámenes o pendientes y te avisamos a tiempo.',
-              actionLabel: 'Crear la primera',
-              onAction: () => showTaskFormSheet(context, cubit: context.read<TasksCubit>(), subjectOptions: _scheduleSubjects()),
+          TasksLoaded(:final tasks) when tasks.isEmpty => AnimatedEntrance(
+              child: StatusView.empty(
+                icon: Symbols.task_alt_rounded,
+                title: 'Sin tareas',
+                message: 'Anota entregas, exámenes o pendientes y te avisamos a tiempo.',
+                actionLabel: 'Crear la primera',
+                onAction: () => showTaskFormSheet(
+                  context,
+                  cubit: context.read<TasksCubit>(),
+                  subjectOptions: _scheduleSubjects(),
+                ),
+              ),
             ),
           TasksLoaded(:final tasks) => _TaskList(tasks: _sorted(tasks)),
         };
@@ -96,7 +139,6 @@ class _TaskListView extends StatelessWidget {
     );
   }
 
-  /// Pendientes primero, luego por prioridad y fecha.
   List<TaskItem> _sorted(List<TaskItem> tasks) {
     final sorted = [...tasks];
     sorted.sort((a, b) {
@@ -117,39 +159,48 @@ class _TaskListView extends StatelessWidget {
 class _TaskList extends StatelessWidget {
   final List<TaskItem> tasks;
 
-  // La lista llega ya ordenada: antes se reordenaba dentro de `itemCount` y
-  // otra vez dentro de cada `itemBuilder`, o sea una vez por fila pintada.
   const _TaskList({required this.tasks});
 
   @override
   Widget build(BuildContext context) {
     final pending = tasks.where((t) => !t.isCompleted).length;
 
-    return ListView.separated(
+    // Ya que usamos SliverToBoxAdapter arriba, podemos usar ListView con
+    // shrinkWrap o directamente mapear los elementos a un Column. 
+    // Como las listas de tareas no suelen ser de miles de items y la 
+    // animación escalonada funciona mejor rindiéndolos todos a la vez, 
+    // usaremos Column en vez de ListView dentro de CustomScrollView.
+    return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
         AppSpacing.md,
         AppSpacing.lg,
-        // Espacio para que el FAB extendido no tape la última tarjeta.
-        AppSpacing.xxl + AppSpacing.xl,
+        AppSpacing.xxl + AppSpacing.xl, // FAB padding
       ),
-      itemCount: tasks.length + 1,
-      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (context, index) {
-        if (index == 0) {
-          final theme = Theme.of(context);
-          return Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-            child: Text(
-              pending == 0
-                  ? 'Todo al corriente'
-                  : '$pending pendiente${pending == 1 ? '' : 's'}',
-              style: theme.textTheme.sectionTitle,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AnimatedEntrance(
+            index: 0,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: Text(
+                pending == 0
+                    ? 'Todo al corriente'
+                    : '$pending pendiente${pending == 1 ? '' : 's'}',
+                style: Theme.of(context).textTheme.sectionTitle,
+              ),
             ),
-          );
-        }
-        return _TaskTile(task: tasks[index - 1]);
-      },
+          ),
+          for (var i = 0; i < tasks.length; i++) ...[
+            AnimatedEntrance(
+              index: i + 1,
+              child: _TaskTile(task: tasks[i]),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -173,15 +224,12 @@ class _TaskTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
         decoration: BoxDecoration(
           color: colorScheme.errorContainer,
-          // Mismo radio que la tarjeta: con uno menor, el fondo rojo asomaba
-          // por las esquinas al deslizar.
           borderRadius: AppRadius.lgAll,
         ),
         child: Icon(Symbols.delete_rounded, color: colorScheme.onErrorContainer),
       ),
       onDismissed: (_) {
         cubit.deleteTask(task.id!);
-        // Borrar era inmediato e irreversible; ahora hay ventana para revertir.
         AppSnack.undo(
           context,
           message: 'Tarea eliminada',
@@ -190,8 +238,13 @@ class _TaskTile extends StatelessWidget {
       },
       child: AppCard(
         padding: EdgeInsets.zero,
+        onTap: () => showTaskFormSheet(
+          context,
+          cubit: cubit,
+          task: task,
+          subjectOptions: _scheduleSubjects(),
+        ),
         child: AppListRow(
-          onTap: () => showTaskFormSheet(context, cubit: cubit, task: task, subjectOptions: _scheduleSubjects()),
           leading: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -226,7 +279,6 @@ class _TaskTile extends StatelessWidget {
     final dueDay = DateTime(due.year, due.month, due.day);
     final days = dueDay.difference(today).inDays;
 
-    // Relativo cuando está cerca, que es cuando importa; fecha si está lejos.
     return switch (days) {
       0 => 'Vence hoy',
       1 => 'Vence mañana',
