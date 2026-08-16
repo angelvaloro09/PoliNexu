@@ -25,6 +25,7 @@ import '../../blocs/schedule/schedule_overrides_cubit.dart';
 import '../../blocs/schedule/schedule_state.dart';
 import '../../blocs/tasks/tasks_cubit.dart';
 import '../../blocs/tasks/tasks_state.dart';
+import '../../widgets/animated_entrance.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/priority_flag.dart';
 import '../../widgets/section_header.dart';
@@ -68,37 +69,51 @@ class _ScheduleViewState extends State<_ScheduleView> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Horario'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: AppSpacing.md),
-            child: SegmentedButton<_ScheduleViewMode>(
-              showSelectedIcon: false,
-              segments: const [
-                ButtonSegment(
-                  value: _ScheduleViewMode.week,
-                  icon: Icon(Symbols.view_week_rounded),
+      // `NestedScrollView` (no `CustomScrollView` plano) porque el body en
+      // modo calendario (`ScheduleCalendarView`) usa `Column`+`Expanded`
+      // internamente (calendario fijo arriba, detalle del día con alto
+      // acotado abajo) — necesita que su padre le dé alto acotado normal,
+      // que `body:` de `NestedScrollView` sí provee (a diferencia de meter
+      // todo como slivers).
+      body: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) => [
+          SliverAppBar.large(
+            title: Text('Horario', style: theme.textTheme.heroTitle),
+            backgroundColor: theme.colorScheme.surface,
+            scrolledUnderElevation: 0,
+            actions: [
+              Padding(
+                padding: const EdgeInsets.only(right: AppSpacing.md),
+                child: SegmentedButton<_ScheduleViewMode>(
+                  showSelectedIcon: false,
+                  segments: const [
+                    ButtonSegment(
+                      value: _ScheduleViewMode.week,
+                      icon: Icon(Symbols.view_week_rounded),
+                    ),
+                    ButtonSegment(
+                      value: _ScheduleViewMode.calendar,
+                      icon: Icon(Symbols.calendar_month_rounded),
+                    ),
+                  ],
+                  selected: {_mode},
+                  onSelectionChanged: (selection) => setState(() => _mode = selection.first),
                 ),
-                ButtonSegment(
-                  value: _ScheduleViewMode.calendar,
-                  icon: Icon(Symbols.calendar_month_rounded),
-                ),
-              ],
-              selected: {_mode},
-              onSelectionChanged: (selection) => setState(() => _mode = selection.first),
-            ),
+              ),
+            ],
           ),
         ],
-      ),
-      body: AnimatedSwitcher(
-        duration: AppMotion.normal,
-        switchInCurve: AppMotion.emphasized,
-        switchOutCurve: AppMotion.emphasizedAccelerate,
-        child: _mode == _ScheduleViewMode.week
-            ? const _WeekDayView(key: ValueKey('week'))
-            : const ScheduleCalendarView(key: ValueKey('calendar')),
+        body: AnimatedSwitcher(
+          duration: AppMotion.normal,
+          switchInCurve: AppMotion.emphasized,
+          switchOutCurve: AppMotion.emphasizedAccelerate,
+          child: _mode == _ScheduleViewMode.week
+              ? const _WeekDayView(key: ValueKey('week'))
+              : const ScheduleCalendarView(key: ValueKey('calendar')),
+        ),
       ),
     );
   }
@@ -273,7 +288,7 @@ class _DayChip extends StatelessWidget {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: AppSpacing.xxs),
             Text(
               '${date.day}',
               style: theme.textTheme.cardTitle?.copyWith(
@@ -296,7 +311,7 @@ class _DayChip extends StatelessWidget {
                     Container(
                       width: 4,
                       height: 4,
-                      margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xxs),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: selected ? colorScheme.onPrimary : colorScheme.error,
@@ -355,7 +370,9 @@ class _DayDetail extends StatelessWidget {
                 e.category == AcademicCalendarCategory.vacaciones);
 
             final visibleDaySessions =
-                isWithinSchoolCycle(academicEvents, selectedDay) && !isRestDay ? daySessions : const [];
+                isWithinSchoolCycle(academicEvents, selectedDay) && !isRestDay
+                    ? daySessions
+                    : const <(ScheduleEntry, ScheduleSession)>[];
             
             final visibleDayTasks = dayTasks;
 
@@ -366,6 +383,10 @@ class _DayDetail extends StatelessWidget {
 
                 return BlocBuilder<ScheduleOverridesCubit, ScheduleOverridesSnapshot>(
               builder: (context, overrides) {
+                // Índice corrido para que el stagger de entrada sea continuo
+                // entre las secciones (cita/eventos IPN/clases/tareas).
+                var entryIndex = 0;
+
                 return AnimatedSwitcher(
                   duration: AppMotion.normal,
                   switchInCurve: AppMotion.emphasized,
@@ -383,7 +404,8 @@ class _DayDetail extends StatelessWidget {
                         ),
                       ),
                     if (citaToday && winningTask == null) ...[
-                      FadeSlideIn(
+                      AnimatedEntrance(
+                        index: entryIndex++,
                         child: AppCard(
                           padding: EdgeInsets.zero,
                           accentColor: colorScheme.tertiary,
@@ -398,7 +420,8 @@ class _DayDetail extends StatelessWidget {
                     if (dayAcademicEvents.isNotEmpty && winningTask == null) ...[
                       SectionHeader(title: 'Calendario IPN', count: dayAcademicEvents.length),
                       for (final event in dayAcademicEvents) ...[
-                        FadeSlideIn(
+                        AnimatedEntrance(
+                          index: entryIndex++,
                           child: AppCard(
                             padding: EdgeInsets.zero,
                             accentColor: academicCategoryColor(colorScheme, event.category),
@@ -418,7 +441,8 @@ class _DayDetail extends StatelessWidget {
                     if (visibleDaySessions.isNotEmpty) ...[
                       SectionHeader(title: 'Clases', count: visibleDaySessions.length),
                       for (final (entry, session) in visibleDaySessions) ...[
-                        FadeSlideIn(
+                        AnimatedEntrance(
+                          index: entryIndex++,
                           child: _SessionCard(entry: entry, session: session, overrides: overrides),
                         ),
                         const SizedBox(height: AppSpacing.sm),
@@ -433,7 +457,8 @@ class _DayDetail extends StatelessWidget {
                       )
                     else
                       for (final task in visibleDayTasks) ...[
-                        FadeSlideIn(
+                        AnimatedEntrance(
+                          index: entryIndex++,
                           child: AppCard(
                             padding: EdgeInsets.zero,
                             child: ListTile(
@@ -522,7 +547,7 @@ class _SessionCard extends StatelessWidget {
               children: [
                 Text(entry.subject, style: theme.textTheme.cardTitle),
                 if (entry.teachers.isNotEmpty) ...[
-                  const SizedBox(height: 2),
+                  const SizedBox(height: AppSpacing.xxs),
                   Text(
                     entry.teachers,
                     maxLines: 2,

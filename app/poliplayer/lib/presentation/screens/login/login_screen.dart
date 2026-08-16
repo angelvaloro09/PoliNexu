@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import '../../../core/constants/saes_schools.dart';
+import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../blocs/auth/auth_cubit.dart';
@@ -205,9 +206,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       FilledButton(
                         onPressed: isLoading ? null : _submitLogin,
                         child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 300),
-                          switchInCurve: Curves.easeInOut,
-                          switchOutCurve: Curves.easeInOut,
+                          duration: AppMotion.normal,
+                          switchInCurve: AppMotion.emphasized,
+                          switchOutCurve: AppMotion.emphasizedAccelerate,
                           child: isLoginLoading
                               ? SizedBox(
                                   key: const ValueKey('loading'),

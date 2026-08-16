@@ -12,6 +12,7 @@ import '../../../domain/models/kardex.dart';
 import '../../../domain/repositories/auth_repository.dart';
 import '../../blocs/kardex/kardex_cubit.dart';
 import '../../blocs/kardex/kardex_state.dart';
+import '../../widgets/animated_entrance.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/skeleton.dart';
 import '../../widgets/stale_data_banner.dart';
@@ -87,11 +88,11 @@ class _KardexView extends StatelessWidget {
                       ),
                       const SizedBox(height: AppSpacing.md),
                     ],
-                    _SummaryCard(kardex: kardex),
+                    AnimatedEntrance(index: 0, child: _SummaryCard(kardex: kardex)),
                     const SizedBox(height: AppSpacing.lg),
                     // El más reciente primero: es el que se consulta.
-                    for (final semester in kardex.semesters.reversed) ...[
-                      _SemesterTile(semester: semester),
+                    for (final (i, semester) in kardex.semesters.reversed.indexed) ...[
+                      AnimatedEntrance(index: 1 + i, child: _SemesterTile(semester: semester)),
                       const SizedBox(height: AppSpacing.sm),
                     ],
                   ],
@@ -175,7 +176,7 @@ class _Metric extends StatelessWidget {
             color: emphasized ? colorScheme.primary : colorScheme.onSurface,
           ),
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: AppSpacing.xxs),
         Text(
           label,
           style: theme.textTheme.meta?.copyWith(color: colorScheme.onSurfaceVariant),
@@ -268,7 +269,7 @@ class _SubjectRow extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.body,
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: AppSpacing.xxs),
                 Text(
                   [subject.period, subject.examType]
                       .where((v) => v.trim().isNotEmpty)

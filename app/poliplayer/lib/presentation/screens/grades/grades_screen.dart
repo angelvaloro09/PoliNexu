@@ -13,6 +13,7 @@ import '../../../domain/models/grade_entry.dart';
 import '../../../domain/repositories/auth_repository.dart';
 import '../../blocs/grades/grades_cubit.dart';
 import '../../blocs/grades/grades_state.dart';
+import '../../widgets/animated_entrance.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/skeleton.dart';
 import '../../widgets/stale_data_banner.dart';
@@ -49,63 +50,127 @@ class _GradesView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Calificaciones')),
       body: BlocBuilder<GradesCubit, GradesState>(
         builder: (context, state) {
           return switch (state) {
-            GradesInitial() || GradesLoading() => const Padding(
-                padding: EdgeInsets.all(AppSpacing.lg),
-                child: SkeletonList(itemCount: 5),
+            GradesInitial() || GradesLoading() => CustomScrollView(
+                slivers: [
+                  SliverAppBar.large(
+                    title: Text('Calificaciones', style: theme.textTheme.heroTitle),
+                    backgroundColor: theme.colorScheme.surface,
+                    scrolledUnderElevation: 0,
+                  ),
+                  const SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Padding(
+                      padding: EdgeInsets.all(AppSpacing.lg),
+                      child: SkeletonList(itemCount: 5),
+                    ),
+                  ),
+                ],
               ),
             GradesError(:final message, :final sessionRequired) when sessionRequired =>
-              StatusView.error(
-                title: 'Requiere sesión',
-                icon: Symbols.lock_rounded,
-                actionLabel: 'Iniciar sesión',
-                message: message,
-                onRetry: () => context.go(_loginRoute()),
+              CustomScrollView(
+                slivers: [
+                  SliverAppBar.large(
+                    title: Text('Calificaciones', style: theme.textTheme.heroTitle),
+                    backgroundColor: theme.colorScheme.surface,
+                    scrolledUnderElevation: 0,
+                  ),
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: StatusView.error(
+                      title: 'Requiere sesión',
+                      icon: Symbols.lock_rounded,
+                      actionLabel: 'Iniciar sesión',
+                      message: message,
+                      onRetry: () => context.go(_loginRoute()),
+                    ),
+                  ),
+                ],
               ),
-            GradesError(:final message) => StatusView.error(
-                message: message,
-                onRetry: () => context.read<GradesCubit>().loadGrades(force: true),
+            GradesError(:final message) => CustomScrollView(
+                slivers: [
+                  SliverAppBar.large(
+                    title: Text('Calificaciones', style: theme.textTheme.heroTitle),
+                    backgroundColor: theme.colorScheme.surface,
+                    scrolledUnderElevation: 0,
+                  ),
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: StatusView.error(
+                      message: message,
+                      onRetry: () => context.read<GradesCubit>().loadGrades(force: true),
+                    ),
+                  ),
+                ],
               ),
-            GradesLoaded(:final entries) when entries.isEmpty => StatusView.empty(
-                icon: Symbols.grade_rounded,
-                title: 'Todavía no hay calificaciones',
-                message: 'Aparecerán aquí en cuanto tus profesores las capturen.',
-                actionLabel: 'Actualizar',
-                onAction: () => context.read<GradesCubit>().loadGrades(force: true),
+            GradesLoaded(:final entries) when entries.isEmpty => CustomScrollView(
+                slivers: [
+                  SliverAppBar.large(
+                    title: Text('Calificaciones', style: theme.textTheme.heroTitle),
+                    backgroundColor: theme.colorScheme.surface,
+                    scrolledUnderElevation: 0,
+                  ),
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: StatusView.empty(
+                      icon: Symbols.grade_rounded,
+                      title: 'Todavía no hay calificaciones',
+                      message: 'Aparecerán aquí en cuanto tus profesores las capturen.',
+                      actionLabel: 'Actualizar',
+                      onAction: () => context.read<GradesCubit>().loadGrades(force: true),
+                    ),
+                  ),
+                ],
               ),
             GradesLoaded(:final entries, :final fetchedAt, :final fromCache, :final sessionExpired) =>
               RefreshIndicator(
                 onRefresh: () => context.read<GradesCubit>().loadGrades(force: true),
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    AppSpacing.md,
-                    AppSpacing.lg,
-                    AppSpacing.xxl,
-                  ),
-                  children: [
-                    if (fromCache) ...[
-                      StaleDataBanner(
-                        fetchedAt: fetchedAt,
-                        sessionExpired: sessionExpired,
-                        onLoginTap: sessionExpired ? () => context.go(_loginRoute()) : null,
+                child: CustomScrollView(
+                  slivers: [
+                    SliverAppBar.large(
+                      title: Text('Calificaciones', style: theme.textTheme.heroTitle),
+                      backgroundColor: theme.colorScheme.surface,
+                      scrolledUnderElevation: 0,
+                    ),
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.lg,
+                        0,
+                        AppSpacing.lg,
+                        AppSpacing.xxl,
                       ),
-                      const SizedBox(height: AppSpacing.md),
-                    ],
-                    // Accesos que antes eran dos íconos sin etiqueta en la
-                    // AppBar: nadie descubre un icono de calculadora ahí.
-                    const _ToolsRow(),
-                    const SizedBox(height: AppSpacing.md),
-                    _AverageCard(entries: entries),
-                    const SizedBox(height: AppSpacing.lg),
-                    for (final entry in entries) ...[
-                      _GradeCard(entry: entry),
-                      const SizedBox(height: AppSpacing.sm),
-                    ],
+                      sliver: SliverToBoxAdapter(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (fromCache) ...[
+                              StaleDataBanner(
+                                fetchedAt: fetchedAt,
+                                sessionExpired: sessionExpired,
+                                onLoginTap:
+                                    sessionExpired ? () => context.go(_loginRoute()) : null,
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                            ],
+                            // Accesos que antes eran dos íconos sin etiqueta en la
+                            // AppBar: nadie descubre un icono de calculadora ahí.
+                            const AnimatedEntrance(index: 0, child: _ToolsRow()),
+                            const SizedBox(height: AppSpacing.md),
+                            AnimatedEntrance(index: 1, child: _AverageCard(entries: entries)),
+                            const SizedBox(height: AppSpacing.lg),
+                            for (final (i, entry) in entries.indexed) ...[
+                              AnimatedEntrance(index: 2 + i, child: _GradeCard(entry: entry)),
+                              const SizedBox(height: AppSpacing.sm),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -229,7 +294,7 @@ class _GradeCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(entry.subject, style: theme.textTheme.cardTitle),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: AppSpacing.xxs),
                     Text(
                       'Grupo: ${entry.group}',
                       style: theme.textTheme.meta?.copyWith(
@@ -267,7 +332,7 @@ class _GradeCard extends StatelessWidget {
                 const SizedBox(width: AppSpacing.xs),
                 Text(
                   'No aprobada',
-                  style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.error),
+                  style: theme.textTheme.meta?.copyWith(color: colorScheme.error),
                 ),
               ],
             ),
@@ -341,7 +406,7 @@ class _PartialCell extends StatelessWidget {
           ),
           Text(
             label,
-            style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant),
+            style: theme.textTheme.meta?.copyWith(color: colorScheme.onSurfaceVariant),
           ),
         ],
       ),

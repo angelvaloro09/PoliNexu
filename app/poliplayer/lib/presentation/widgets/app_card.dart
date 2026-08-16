@@ -19,6 +19,11 @@ class AppCard extends StatefulWidget {
   /// Color de acento en el borde izquierdo (categoría, materia, prioridad).
   final Color? accentColor;
 
+  /// Fondo en degradado (p. ej. `AppTheme.brandGradient`) en vez de un color
+  /// plano — reservado para la única tarjeta "hero" de una pantalla, no para
+  /// uso general. Tiene prioridad sobre [emphasized] si ambos se pasan.
+  final Gradient? gradient;
+
   const AppCard({
     super.key,
     required this.child,
@@ -26,6 +31,7 @@ class AppCard extends StatefulWidget {
     this.onTap,
     this.emphasized = false,
     this.accentColor,
+    this.gradient,
   });
 
   @override
@@ -88,19 +94,26 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
       );
     }
 
+    final inner = widget.onTap == null
+        ? content
+        : InkWell(
+            onTap: widget.onTap,
+            onTapDown: _handleTapDown,
+            onTapUp: _handleTapUp,
+            onTapCancel: _handleTapCancel,
+            borderRadius: AppRadius.lgAll,
+            child: content,
+          );
+
     final card = Card(
-      color: widget.emphasized ? colorScheme.secondaryContainer : null,
+      color: widget.gradient != null
+          ? Colors.transparent
+          : (widget.emphasized ? colorScheme.secondaryContainer : null),
       shape: RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
-      child: widget.onTap == null
-          ? content
-          : InkWell(
-              onTap: widget.onTap,
-              onTapDown: _handleTapDown,
-              onTapUp: _handleTapUp,
-              onTapCancel: _handleTapCancel,
-              borderRadius: AppRadius.lgAll,
-              child: content,
-            ),
+      clipBehavior: widget.gradient != null ? Clip.antiAlias : Clip.none,
+      child: widget.gradient != null
+          ? DecoratedBox(decoration: BoxDecoration(gradient: widget.gradient), child: inner)
+          : inner,
     );
 
     if (widget.onTap == null) {

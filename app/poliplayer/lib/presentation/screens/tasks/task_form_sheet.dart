@@ -5,6 +5,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/constants/task_icons.dart';
+import '../../../core/di/injection.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -95,9 +96,14 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
   }
 
   void _calculateDefaultEndDate() {
-    final calendarState = context.read<CalendarCubit>().state;
+    // `getIt`, no `context.read`: este sheet se abre desde Tareas, que sólo
+    // provee `TasksCubit` en su árbol — `CalendarCubit` no está ahí como
+    // Provider ambiental (sí lo está en Inicio/Horario, lo que hacía que el
+    // error sólo apareciera al crear una tarea desde Tareas). `CalendarCubit`
+    // ya es singleton en el DI, no necesita venir de un `BuildContext`.
+    final calendarState = getIt<CalendarCubit>().state;
     if (calendarState is CalendarLoaded) {
-      final finCiclo = calendarState.events.where((e) => e.category == AcademicCalendarCategory.finCiclo).firstOrNull;
+      final finCiclo = calendarState.events.where((e) => e.category == AcademicCalendarCategory.finPeriodo).firstOrNull;
       if (finCiclo != null && finCiclo.endDate.isAfter(DateTime.now())) {
         _recurrenceEndDate = finCiclo.endDate;
         return;
@@ -155,7 +161,7 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     if (!_isEditing && _isRepetitive && _selectedDays.isEmpty) {
-      AppSnack.show(context, 'Selecciona al menos un día para la tarea repetitiva');
+      AppSnack.error(context, 'Selecciona al menos un día para la tarea repetitiva');
       return;
     }
 
@@ -178,9 +184,11 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
 
       if (_isPartOfSeries && _updateSeries) {
         await widget.cubit.updateRepetitiveTaskSeries(taskToSave, widget.task!.dueDate!, untilDate: _updateSeriesUntil);
+        if (!mounted) return;
         AppSnack.success(context, 'Serie actualizada exitosamente');
       } else {
         await widget.cubit.updateTask(taskToSave);
+        if (!mounted) return;
         AppSnack.success(context, 'Actualizada exitosamente');
       }
     } else {
@@ -213,11 +221,12 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
         }
 
         if (generatedTasks.isEmpty) {
-          AppSnack.show(context, 'No hay días que coincidan en el rango seleccionado');
+          AppSnack.error(context, 'No hay días que coincidan en el rango seleccionado');
           return;
         }
 
         await widget.cubit.addRepetitiveTasks(generatedTasks);
+        if (!mounted) return;
         AppSnack.success(context, '${generatedTasks.length} tareas creadas');
       } else {
         final taskToSave = TaskItem(
@@ -233,6 +242,7 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
           subject: subject.isEmpty ? null : subject,
         );
         await widget.cubit.addTask(taskToSave);
+        if (!mounted) return;
         AppSnack.success(context, 'Guardada exitosamente');
       }
     }

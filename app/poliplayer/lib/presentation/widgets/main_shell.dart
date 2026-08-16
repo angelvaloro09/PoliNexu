@@ -58,7 +58,16 @@ Widget Function(bool selected) _symbolIcon(IconData icon) {
 /// seleccionada/no seleccionada: el pill/indicador que ya dibuja
 /// `NavigationBar` detrás del ícono activo es suficiente señal.
 Widget _ipnLogoIcon(bool selected) {
-  return Image.asset(_ipnLogoAsset, width: 24, height: 24);
+  // El PNG original es guinda — se recolorea a blanco sólido (máscara sobre
+  // los píxeles opacos) para que combine con el resto de íconos del navbar
+  // en vez de desentonar con el color institucional del IPN.
+  return Image.asset(
+    _ipnLogoAsset,
+    width: 24,
+    height: 24,
+    color: Colors.white,
+    colorBlendMode: BlendMode.srcIn,
+  );
 }
 
 /// Shell de navegación principal (Material 3 `NavigationBar`) para las

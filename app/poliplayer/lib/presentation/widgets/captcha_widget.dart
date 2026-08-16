@@ -44,6 +44,7 @@ class CaptchaWidget extends StatelessWidget {
             child: AnimatedSwitcher(
               duration: AppMotion.normal,
               switchInCurve: AppMotion.emphasized,
+              switchOutCurve: AppMotion.emphasizedAccelerate,
               child: _buildContent(context, colorScheme),
             ),
           ),

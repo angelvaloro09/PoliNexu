@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 /// No son colores de marca ni de estado: sólo sirven para que dos clases
 /// seguidas se distingan de un vistazo. Se eligieron con la saturación de
 /// Material You para que convivan con el azul de PoliNexu sin competir.
+// 10 en vez de 6: con 6 buckets, una carga típica de 8-12 materias por
+// semestre garantiza colisiones (principio del palomar). 10 no las elimina
+// pero las hace bastante menos probables sin caer en tonos indistinguibles.
 const _accentsLight = [
   Color(0xFF1E63D1), // azul de marca
   Color(0xFF00796B), // verde azulado
@@ -12,6 +15,10 @@ const _accentsLight = [
   Color(0xFF6A3AB2), // violeta
   Color(0xFFB3261E), // rojo
   Color(0xFF00629E), // azul cielo
+  Color(0xFFAD1457), // rosa
+  Color(0xFF5D6E00), // oliva
+  Color(0xFF3949AB), // índigo
+  Color(0xFF6D4C41), // café
 ];
 
 const _accentsDark = [
@@ -21,6 +28,10 @@ const _accentsDark = [
   Color(0xFFCBBEFF),
   Color(0xFFF2B8B5),
   Color(0xFF8ECDF7),
+  Color(0xFFF6ADC7),
+  Color(0xFFD2DB8C),
+  Color(0xFFBAC3FF),
+  Color(0xFFE3BFA9),
 ];
 
 /// Color estable para una materia: el mismo nombre siempre da el mismo color.

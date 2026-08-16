@@ -5,6 +5,7 @@ import '../../core/theme/app_motion.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
+import 'nexus_mark.dart';
 
 /// Estado de pantalla completa cuando no hay contenido que mostrar.
 ///
@@ -22,6 +23,11 @@ class StatusView extends StatelessWidget {
   /// Tiñe el ícono con el color de error.
   final bool isError;
 
+  /// Reemplaza el ícono genérico por la marca (`NexusMark`), a tono apagado.
+  /// Sólo válido para el estado vacío — nunca en error (una marca junto a un
+  /// fallo lee como asociación negativa). Opt-in por pantalla, no global.
+  final bool useBrandMark;
+
   const StatusView({
     super.key,
     required this.icon,
@@ -30,6 +36,7 @@ class StatusView extends StatelessWidget {
     this.actionLabel,
     this.onAction,
     this.isError = false,
+    this.useBrandMark = false,
   });
 
   /// Fallo al cargar: siempre ofrece reintentar. `title`/`icon`/`actionLabel`
@@ -62,6 +69,7 @@ class StatusView extends StatelessWidget {
     String? message,
     String? actionLabel,
     VoidCallback? onAction,
+    bool useBrandMark = false,
   }) =>
       StatusView(
         key: key,
@@ -70,6 +78,7 @@ class StatusView extends StatelessWidget {
         message: message,
         actionLabel: actionLabel,
         onAction: onAction,
+        useBrandMark: useBrandMark,
       );
 
   @override
@@ -103,7 +112,13 @@ class StatusView extends StatelessWidget {
                   color: accent.withValues(alpha: 0.10),
                   borderRadius: AppRadius.lgAll,
                 ),
-                child: Icon(icon, size: AppIconSize.lg, color: accent),
+                child: useBrandMark
+                    ? NexusMark(
+                        size: AppIconSize.lg,
+                        color: accent.withValues(alpha: 0.55),
+                        accentColor: accent.withValues(alpha: 0.35),
+                      )
+                    : Icon(icon, size: AppIconSize.lg, color: accent),
               ),
             ),
             const SizedBox(height: AppSpacing.lg),

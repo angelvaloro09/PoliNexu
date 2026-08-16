@@ -126,6 +126,7 @@ class _TaskListView extends StatelessWidget {
                 title: 'Sin tareas',
                 message: 'Anota entregas, exámenes o pendientes y te avisamos a tiempo.',
                 actionLabel: 'Crear la primera',
+                useBrandMark: true,
                 onAction: () => showTaskFormSheet(
                   context,
                   cubit: context.read<TasksCubit>(),
@@ -164,11 +165,12 @@ class _TaskList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pending = tasks.where((t) => !t.isCompleted).length;
+    final theme = Theme.of(context);
 
     // Ya que usamos SliverToBoxAdapter arriba, podemos usar ListView con
-    // shrinkWrap o directamente mapear los elementos a un Column. 
-    // Como las listas de tareas no suelen ser de miles de items y la 
-    // animación escalonada funciona mejor rindiéndolos todos a la vez, 
+    // shrinkWrap o directamente mapear los elementos a un Column.
+    // Como las listas de tareas no suelen ser de miles de items y la
+    // animación escalonada funciona mejor rindiéndolos todos a la vez,
     // usaremos Column en vez de ListView dentro de CustomScrollView.
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -183,13 +185,37 @@ class _TaskList extends StatelessWidget {
           AnimatedEntrance(
             index: 0,
             child: Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-              child: Text(
-                pending == 0
-                    ? 'Todo al corriente'
-                    : '$pending pendiente${pending == 1 ? '' : 's'}',
-                style: Theme.of(context).textTheme.sectionTitle,
-              ),
+              padding: const EdgeInsets.only(bottom: AppSpacing.md),
+              child: pending == 0
+                  ? Text('Todo al corriente', style: theme.textTheme.sectionTitle)
+                  // Mismo patrón de número animado que `_AverageCard` en
+                  // Grades: el conteo se vuelve el elemento hero de la
+                  // pantalla en vez de texto plano del mismo peso que todo
+                  // lo demás.
+                  : Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        TweenAnimationBuilder<double>(
+                          tween: Tween(begin: 0, end: pending.toDouble()),
+                          duration: AppMotion.slow,
+                          curve: AppMotion.emphasized,
+                          builder: (context, value, _) => Text(
+                            '${value.round()}',
+                            style: theme.textTheme.metric?.copyWith(
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        Text(
+                          pending == 1 ? 'pendiente' : 'pendientes',
+                          style: theme.textTheme.bodySecondary?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
             ),
           ),
           for (var i = 0; i < tasks.length; i++) ...[

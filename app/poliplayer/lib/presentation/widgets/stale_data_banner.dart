@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../../core/theme/app_motion.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
@@ -66,7 +68,14 @@ class StaleDataBanner extends StatelessWidget {
             ),
         ],
       ),
-    );
+    )
+        // El banner sólo se monta cuando `fromCache` es true (los call-sites
+        // lo incluyen condicionalmente en la lista) — animar su entrada aquí
+        // adentro basta para que aparezca creciendo en vez de hacer pop,
+        // sin tocar los 5 lugares donde se usa.
+        .animate()
+        .fadeIn(duration: AppMotion.normal, curve: AppMotion.emphasized)
+        .scaleXY(begin: 0.96, end: 1, duration: AppMotion.normal, curve: AppMotion.emphasized);
   }
 
   /// "hoy a las 14:05" pesa menos que una fecha completa cuando el dato es

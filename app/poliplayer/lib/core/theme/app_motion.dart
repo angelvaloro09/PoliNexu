@@ -21,6 +21,10 @@ class AppMotion {
   /// Secuencia de arranque del splash.
   static const Duration intro = Duration(milliseconds: 900);
 
+  /// Bucle ambiental continuo (brillo del skeleton). No es una transición
+  /// discreta como las de arriba — un ciclo completo de ida y vuelta.
+  static const Duration shimmer = Duration(milliseconds: 1200);
+
   /// Curva estándar M3 para elementos que entran a pantalla.
   static const Curve emphasized = Curves.easeOutCubic;
 

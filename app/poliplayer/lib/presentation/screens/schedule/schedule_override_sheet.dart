@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
+import '../../../core/theme/app_motion.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
@@ -154,9 +156,11 @@ class _ColorSwatch extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadius.pill),
-      child: Container(
-        width: 36,
-        height: 36,
+      child: AnimatedContainer(
+        duration: AppMotion.fast,
+        curve: AppMotion.standard,
+        width: selected ? 40 : 36,
+        height: selected ? 40 : 36,
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: color,
@@ -165,7 +169,12 @@ class _ColorSwatch extends StatelessWidget {
               ? Border.all(color: Theme.of(context).colorScheme.onSurface, width: 2)
               : null,
         ),
-        child: selected ? const Icon(Icons.check, color: Colors.white, size: 18) : null,
+        child: AnimatedScale(
+          duration: AppMotion.fast,
+          curve: AppMotion.standard,
+          scale: selected ? 1 : 0,
+          child: const Icon(Symbols.check_rounded, color: Colors.white, size: 18),
+        ),
       ),
     );
   }

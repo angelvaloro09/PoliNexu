@@ -8,6 +8,7 @@ import '../../../core/di/injection.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/weekday.dart';
 import '../../../domain/models/academic_calendar_event.dart';
 import '../../../domain/models/schedule_entry.dart';
@@ -25,6 +26,7 @@ import '../../widgets/skeleton.dart';
 import '../../widgets/stale_data_banner.dart';
 import '../../widgets/status_view.dart';
 import '../../widgets/animated_entrance.dart';
+import '../../widgets/nexus_mark.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -67,6 +69,13 @@ class _HomeView extends StatelessWidget {
             return CustomScrollView(
               slivers: [
                 SliverAppBar.large(
+                  // Único toque de marca fuera del flujo de auth — sólo en
+                  // Home (la pantalla más vista), no en las 5 tabs por igual,
+                  // para que no se vuelva papel tapiz.
+                  leading: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.sm),
+                    child: NexusMark(size: AppIconSize.md),
+                  ),
                   title: Text(
                     _greeting(today),
                     style: theme.textTheme.heroTitle?.copyWith(color: colorScheme.onSurface),
@@ -181,7 +190,6 @@ class _NextClassCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
 
     return BlocBuilder<ScheduleCubit, ScheduleState>(
       builder: (context, state) {
@@ -213,8 +221,16 @@ class _NextClassCard extends StatelessWidget {
         final start = _timeOn(today, session.startTime);
         final minutesAway = start?.difference(today).inMinutes;
 
+        // La única tarjeta "hero" del día — degradado de marca en vez del
+        // tonal genérico, todo lo demás en la pantalla queda plano.
+        final onGradient = Colors.white;
+
         return AppCard(
-          emphasized: true,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: AppTheme.brandGradient(theme.brightness),
+          ),
           padding: const EdgeInsets.all(AppSpacing.lg),
           onTap: () => context.go('/schedule'), // Hace que reaccione al toque con animación
           child: Column(
@@ -225,7 +241,7 @@ class _NextClassCard extends StatelessWidget {
                   Icon(
                     isNow ? Symbols.play_circle_rounded : Symbols.schedule_rounded,
                     size: AppIconSize.sm,
-                    color: colorScheme.onSecondaryContainer,
+                    color: onGradient,
                     fill: 1,
                   ),
                   const SizedBox(width: AppSpacing.sm),
@@ -235,18 +251,14 @@ class _NextClassCard extends StatelessWidget {
                         : minutesAway != null && minutesAway < 60
                             ? 'En $minutesAway min'
                             : 'Próxima clase',
-                    style: theme.textTheme.meta?.copyWith(
-                      color: colorScheme.onSecondaryContainer,
-                    ),
+                    style: theme.textTheme.meta?.copyWith(color: onGradient),
                   ),
                 ],
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
                 entry.subject,
-                style: theme.textTheme.sectionTitle?.copyWith(
-                  color: colorScheme.onSecondaryContainer,
-                ),
+                style: theme.textTheme.sectionTitle?.copyWith(color: onGradient),
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
@@ -256,7 +268,7 @@ class _NextClassCard extends StatelessWidget {
                     '${session.building ?? ''} ${session.classroom}'.trim(),
                 ].join('  ·  '),
                 style: theme.textTheme.bodySecondary?.copyWith(
-                  color: colorScheme.onSecondaryContainer.withValues(alpha: 0.8),
+                  color: onGradient.withValues(alpha: 0.85),
                 ),
               ),
             ],

@@ -3,6 +3,10 @@
 class AppSpacing {
   AppSpacing._();
 
+  /// Separación mínima (título→subtítulo dentro de una fila). Por debajo de
+  /// `xs`, para el único caso donde 4dp ya se ve como demasiado aire.
+  static const double xxs = 2;
+
   static const double xs = 4;
   static const double sm = 8;
   static const double md = 16;

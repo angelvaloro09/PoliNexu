@@ -240,6 +240,25 @@ class AppTheme {
         thickness: 1,
         space: 1,
       ),
+      // `ExpansionTile` dibuja un borde/divisor propio arriba y abajo por
+      // defecto (independiente de `dividerTheme`) — se anula aquí para que
+      // se lea como una tarjeta plana más, no como un `ListTile` clásico.
+      expansionTileTheme: ExpansionTileThemeData(
+        backgroundColor: colorScheme.surfaceContainerLow,
+        collapsedBackgroundColor: colorScheme.surfaceContainerLow,
+        shape: RoundedRectangleBorder(
+          borderRadius: AppRadius.lgAll,
+          side: BorderSide.none,
+        ),
+        collapsedShape: RoundedRectangleBorder(
+          borderRadius: AppRadius.lgAll,
+          side: BorderSide.none,
+        ),
+        iconColor: colorScheme.onSurfaceVariant,
+        collapsedIconColor: colorScheme.onSurfaceVariant,
+        textColor: colorScheme.onSurface,
+        collapsedTextColor: colorScheme.onSurface,
+      ),
       chipTheme: ChipThemeData(
         backgroundColor: colorScheme.surfaceContainerHigh,
         selectedColor: colorScheme.secondaryContainer,
@@ -259,6 +278,19 @@ class AppTheme {
           return states.contains(WidgetState.selected) ? colorScheme.primary : Colors.transparent;
         }),
         checkColor: WidgetStatePropertyAll(colorScheme.onPrimary),
+      ),
+      switchTheme: SwitchThemeData(
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          return states.contains(WidgetState.selected)
+              ? colorScheme.primary
+              : colorScheme.surfaceContainerHighest;
+        }),
+        trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          return states.contains(WidgetState.selected)
+              ? colorScheme.onPrimary
+              : colorScheme.outline;
+        }),
       ),
       datePickerTheme: DatePickerThemeData(
         backgroundColor: colorScheme.surfaceContainerHigh,

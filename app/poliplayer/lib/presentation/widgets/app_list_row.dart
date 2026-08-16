@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_motion.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_text_styles.dart';
@@ -10,7 +11,7 @@ import '../../core/theme/app_text_styles.dart';
 /// con el radio de 24 de la tarjeta contenedora y las filas se veían apretadas
 /// contra las esquinas. Aquí el ícono va dentro de un contenedor redondeado
 /// (como en las apps de Google) en vez de flotar suelto.
-class AppListRow extends StatelessWidget {
+class AppListRow extends StatefulWidget {
   final IconData? icon;
 
   /// Color del ícono y de su fondo. Por defecto, `primary`.
@@ -41,10 +42,52 @@ class AppListRow extends StatelessWidget {
   });
 
   @override
+  State<AppListRow> createState() => _AppListRowState();
+}
+
+// Mismo mecanismo de tap-scale que `AppCard`: 1.0→0.98 en tap-down, vuelve en
+// up/cancel — para que una fila y una tarjeta se sientan con el mismo peso
+// cuando aparecen juntas en pantalla.
+class _AppListRowState extends State<AppListRow> with SingleTickerProviderStateMixin {
+  late final AnimationController _scaleController;
+  late final Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _scaleController = AnimationController(
+      vsync: this,
+      duration: AppMotion.fast,
+      reverseDuration: AppMotion.fast,
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.98).animate(
+      CurvedAnimation(parent: _scaleController, curve: AppMotion.standard),
+    );
+  }
+
+  @override
+  void dispose() {
+    _scaleController.dispose();
+    super.dispose();
+  }
+
+  void _handleTapDown(TapDownDetails details) {
+    if (widget.onTap != null) _scaleController.forward();
+  }
+
+  void _handleTapUp(TapUpDetails details) {
+    if (widget.onTap != null) _scaleController.reverse();
+  }
+
+  void _handleTapCancel() {
+    if (widget.onTap != null) _scaleController.reverse();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final accent = iconColor ?? colorScheme.primary;
+    final accent = widget.iconColor ?? colorScheme.primary;
 
     final row = Padding(
       padding: const EdgeInsets.symmetric(
@@ -53,37 +96,40 @@ class AppListRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          if (leading != null)
-            leading!
-          else if (icon != null)
+          if (widget.leading != null)
+            widget.leading!
+          else if (widget.icon != null)
             Container(
               padding: const EdgeInsets.all(AppSpacing.sm),
               decoration: BoxDecoration(
                 color: accent.withValues(alpha: 0.12),
                 borderRadius: AppRadius.mdAll,
               ),
-              child: Icon(icon, size: AppIconSize.sm, color: accent),
+              child: Icon(widget.icon, size: AppIconSize.sm, color: accent),
             ),
-          if (leading != null || icon != null) const SizedBox(width: AppSpacing.md),
+          if (widget.leading != null || widget.icon != null)
+            const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  title,
+                  widget.title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.cardTitle?.copyWith(
-                    color: strikethrough ? colorScheme.onSurfaceVariant : colorScheme.onSurface,
-                    decoration: strikethrough ? TextDecoration.lineThrough : null,
+                    color: widget.strikethrough
+                        ? colorScheme.onSurfaceVariant
+                        : colorScheme.onSurface,
+                    decoration: widget.strikethrough ? TextDecoration.lineThrough : null,
                     decorationColor: colorScheme.onSurfaceVariant,
                   ),
                 ),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 2),
+                if (widget.subtitle != null) ...[
+                  const SizedBox(height: AppSpacing.xxs),
                   Text(
-                    subtitle!,
+                    widget.subtitle!,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodySecondary?.copyWith(
@@ -94,15 +140,26 @@ class AppListRow extends StatelessWidget {
               ],
             ),
           ),
-          if (trailing != null) ...[
+          if (widget.trailing != null) ...[
             const SizedBox(width: AppSpacing.sm),
-            trailing!,
+            widget.trailing!,
           ],
         ],
       ),
     );
 
-    if (onTap == null) return row;
-    return InkWell(onTap: onTap, borderRadius: AppRadius.lgAll, child: row);
+    if (widget.onTap == null) return row;
+
+    return ScaleTransition(
+      scale: _scaleAnimation,
+      child: InkWell(
+        onTap: widget.onTap,
+        onTapDown: _handleTapDown,
+        onTapUp: _handleTapUp,
+        onTapCancel: _handleTapCancel,
+        borderRadius: AppRadius.lgAll,
+        child: row,
+      ),
+    );
   }
 }
