@@ -19,6 +19,7 @@ class TaskItem {
   final String title;
   final String? description;
   final DateTime? dueDate;
+  final bool hasTime;
   final bool isCompleted;
   final TaskPriority priority;
   final DateTime createdAt;
@@ -32,6 +33,7 @@ class TaskItem {
     required this.title,
     this.description,
     this.dueDate,
+    this.hasTime = false,
     this.isCompleted = false,
     this.priority = TaskPriority.medium,
     required this.createdAt,
@@ -45,6 +47,7 @@ class TaskItem {
     String? title,
     String? description,
     DateTime? dueDate,
+    bool? hasTime,
     bool? isCompleted,
     TaskPriority? priority,
     TaskType? type,
@@ -57,6 +60,7 @@ class TaskItem {
       title: title ?? this.title,
       description: description ?? this.description,
       dueDate: dueDate ?? this.dueDate,
+      hasTime: hasTime ?? this.hasTime,
       isCompleted: isCompleted ?? this.isCompleted,
       priority: priority ?? this.priority,
       createdAt: createdAt,

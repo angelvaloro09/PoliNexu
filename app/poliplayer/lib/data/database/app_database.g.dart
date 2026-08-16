@@ -142,6 +142,21 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _hasTimeMeta = const VerificationMeta(
+    'hasTime',
+  );
+  @override
+  late final GeneratedColumn<bool> hasTime = GeneratedColumn<bool>(
+    'has_time',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("has_time" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -155,6 +170,7 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
     iconKey,
     alarmEnabled,
     subject,
+    hasTime,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -242,6 +258,12 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
         subject.isAcceptableOrUnknown(data['subject']!, _subjectMeta),
       );
     }
+    if (data.containsKey('has_time')) {
+      context.handle(
+        _hasTimeMeta,
+        hasTime.isAcceptableOrUnknown(data['has_time']!, _hasTimeMeta),
+      );
+    }
     return context;
   }
 
@@ -295,6 +317,10 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
         DriftSqlType.string,
         data['${effectivePrefix}subject'],
       ),
+      hasTime: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}has_time'],
+      )!,
     );
   }
 
@@ -316,6 +342,7 @@ class Task extends DataClass implements Insertable<Task> {
   final String? iconKey;
   final bool alarmEnabled;
   final String? subject;
+  final bool hasTime;
   const Task({
     required this.id,
     required this.title,
@@ -328,6 +355,7 @@ class Task extends DataClass implements Insertable<Task> {
     this.iconKey,
     required this.alarmEnabled,
     this.subject,
+    required this.hasTime,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -351,6 +379,7 @@ class Task extends DataClass implements Insertable<Task> {
     if (!nullToAbsent || subject != null) {
       map['subject'] = Variable<String>(subject);
     }
+    map['has_time'] = Variable<bool>(hasTime);
     return map;
   }
 
@@ -375,6 +404,7 @@ class Task extends DataClass implements Insertable<Task> {
       subject: subject == null && nullToAbsent
           ? const Value.absent()
           : Value(subject),
+      hasTime: Value(hasTime),
     );
   }
 
@@ -395,6 +425,7 @@ class Task extends DataClass implements Insertable<Task> {
       iconKey: serializer.fromJson<String?>(json['iconKey']),
       alarmEnabled: serializer.fromJson<bool>(json['alarmEnabled']),
       subject: serializer.fromJson<String?>(json['subject']),
+      hasTime: serializer.fromJson<bool>(json['hasTime']),
     );
   }
   @override
@@ -412,6 +443,7 @@ class Task extends DataClass implements Insertable<Task> {
       'iconKey': serializer.toJson<String?>(iconKey),
       'alarmEnabled': serializer.toJson<bool>(alarmEnabled),
       'subject': serializer.toJson<String?>(subject),
+      'hasTime': serializer.toJson<bool>(hasTime),
     };
   }
 
@@ -427,6 +459,7 @@ class Task extends DataClass implements Insertable<Task> {
     Value<String?> iconKey = const Value.absent(),
     bool? alarmEnabled,
     Value<String?> subject = const Value.absent(),
+    bool? hasTime,
   }) => Task(
     id: id ?? this.id,
     title: title ?? this.title,
@@ -439,6 +472,7 @@ class Task extends DataClass implements Insertable<Task> {
     iconKey: iconKey.present ? iconKey.value : this.iconKey,
     alarmEnabled: alarmEnabled ?? this.alarmEnabled,
     subject: subject.present ? subject.value : this.subject,
+    hasTime: hasTime ?? this.hasTime,
   );
   Task copyWithCompanion(TasksCompanion data) {
     return Task(
@@ -459,6 +493,7 @@ class Task extends DataClass implements Insertable<Task> {
           ? data.alarmEnabled.value
           : this.alarmEnabled,
       subject: data.subject.present ? data.subject.value : this.subject,
+      hasTime: data.hasTime.present ? data.hasTime.value : this.hasTime,
     );
   }
 
@@ -475,7 +510,8 @@ class Task extends DataClass implements Insertable<Task> {
           ..write('type: $type, ')
           ..write('iconKey: $iconKey, ')
           ..write('alarmEnabled: $alarmEnabled, ')
-          ..write('subject: $subject')
+          ..write('subject: $subject, ')
+          ..write('hasTime: $hasTime')
           ..write(')'))
         .toString();
   }
@@ -493,6 +529,7 @@ class Task extends DataClass implements Insertable<Task> {
     iconKey,
     alarmEnabled,
     subject,
+    hasTime,
   );
   @override
   bool operator ==(Object other) =>
@@ -508,7 +545,8 @@ class Task extends DataClass implements Insertable<Task> {
           other.type == this.type &&
           other.iconKey == this.iconKey &&
           other.alarmEnabled == this.alarmEnabled &&
-          other.subject == this.subject);
+          other.subject == this.subject &&
+          other.hasTime == this.hasTime);
 }
 
 class TasksCompanion extends UpdateCompanion<Task> {
@@ -523,6 +561,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
   final Value<String?> iconKey;
   final Value<bool> alarmEnabled;
   final Value<String?> subject;
+  final Value<bool> hasTime;
   const TasksCompanion({
     this.id = const Value.absent(),
     this.title = const Value.absent(),
@@ -535,6 +574,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.iconKey = const Value.absent(),
     this.alarmEnabled = const Value.absent(),
     this.subject = const Value.absent(),
+    this.hasTime = const Value.absent(),
   });
   TasksCompanion.insert({
     this.id = const Value.absent(),
@@ -548,6 +588,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.iconKey = const Value.absent(),
     this.alarmEnabled = const Value.absent(),
     this.subject = const Value.absent(),
+    this.hasTime = const Value.absent(),
   }) : title = Value(title);
   static Insertable<Task> custom({
     Expression<int>? id,
@@ -561,6 +602,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Expression<String>? iconKey,
     Expression<bool>? alarmEnabled,
     Expression<String>? subject,
+    Expression<bool>? hasTime,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -574,6 +616,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
       if (iconKey != null) 'icon_key': iconKey,
       if (alarmEnabled != null) 'alarm_enabled': alarmEnabled,
       if (subject != null) 'subject': subject,
+      if (hasTime != null) 'has_time': hasTime,
     });
   }
 
@@ -589,6 +632,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Value<String?>? iconKey,
     Value<bool>? alarmEnabled,
     Value<String?>? subject,
+    Value<bool>? hasTime,
   }) {
     return TasksCompanion(
       id: id ?? this.id,
@@ -602,6 +646,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
       iconKey: iconKey ?? this.iconKey,
       alarmEnabled: alarmEnabled ?? this.alarmEnabled,
       subject: subject ?? this.subject,
+      hasTime: hasTime ?? this.hasTime,
     );
   }
 
@@ -641,6 +686,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
     if (subject.present) {
       map['subject'] = Variable<String>(subject.value);
     }
+    if (hasTime.present) {
+      map['has_time'] = Variable<bool>(hasTime.value);
+    }
     return map;
   }
 
@@ -657,7 +705,8 @@ class TasksCompanion extends UpdateCompanion<Task> {
           ..write('type: $type, ')
           ..write('iconKey: $iconKey, ')
           ..write('alarmEnabled: $alarmEnabled, ')
-          ..write('subject: $subject')
+          ..write('subject: $subject, ')
+          ..write('hasTime: $hasTime')
           ..write(')'))
         .toString();
   }
@@ -1952,6 +2001,7 @@ typedef $$TasksTableCreateCompanionBuilder =
       Value<String?> iconKey,
       Value<bool> alarmEnabled,
       Value<String?> subject,
+      Value<bool> hasTime,
     });
 typedef $$TasksTableUpdateCompanionBuilder =
     TasksCompanion Function({
@@ -1966,6 +2016,7 @@ typedef $$TasksTableUpdateCompanionBuilder =
       Value<String?> iconKey,
       Value<bool> alarmEnabled,
       Value<String?> subject,
+      Value<bool> hasTime,
     });
 
 class $$TasksTableFilterComposer extends Composer<_$AppDatabase, $TasksTable> {
@@ -2028,6 +2079,11 @@ class $$TasksTableFilterComposer extends Composer<_$AppDatabase, $TasksTable> {
 
   ColumnFilters<String> get subject => $composableBuilder(
     column: $table.subject,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get hasTime => $composableBuilder(
+    column: $table.hasTime,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -2095,6 +2151,11 @@ class $$TasksTableOrderingComposer
     column: $table.subject,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get hasTime => $composableBuilder(
+    column: $table.hasTime,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$TasksTableAnnotationComposer
@@ -2144,6 +2205,9 @@ class $$TasksTableAnnotationComposer
 
   GeneratedColumn<String> get subject =>
       $composableBuilder(column: $table.subject, builder: (column) => column);
+
+  GeneratedColumn<bool> get hasTime =>
+      $composableBuilder(column: $table.hasTime, builder: (column) => column);
 }
 
 class $$TasksTableTableManager
@@ -2185,6 +2249,7 @@ class $$TasksTableTableManager
                 Value<String?> iconKey = const Value.absent(),
                 Value<bool> alarmEnabled = const Value.absent(),
                 Value<String?> subject = const Value.absent(),
+                Value<bool> hasTime = const Value.absent(),
               }) => TasksCompanion(
                 id: id,
                 title: title,
@@ -2197,6 +2262,7 @@ class $$TasksTableTableManager
                 iconKey: iconKey,
                 alarmEnabled: alarmEnabled,
                 subject: subject,
+                hasTime: hasTime,
               ),
           createCompanionCallback:
               ({
@@ -2211,6 +2277,7 @@ class $$TasksTableTableManager
                 Value<String?> iconKey = const Value.absent(),
                 Value<bool> alarmEnabled = const Value.absent(),
                 Value<String?> subject = const Value.absent(),
+                Value<bool> hasTime = const Value.absent(),
               }) => TasksCompanion.insert(
                 id: id,
                 title: title,
@@ -2223,6 +2290,7 @@ class $$TasksTableTableManager
                 iconKey: iconKey,
                 alarmEnabled: alarmEnabled,
                 subject: subject,
+                hasTime: hasTime,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

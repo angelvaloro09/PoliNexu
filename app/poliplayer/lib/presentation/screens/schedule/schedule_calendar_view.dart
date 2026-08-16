@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../../../core/constants/task_icons.dart';
@@ -168,10 +169,15 @@ class _ScheduleCalendarViewState extends State<ScheduleCalendarView> {
                     : const <AcademicCalendarEvent>[];
                 final dayAcademicEvents =
                     academicEvents.where((e) => e.coversDay(_selectedDay)).toList();
-                // El Horario del SAES no sabe de vacaciones: sólo se listan
-                // clases si el día cae dentro del ciclo escolar activo.
+
+                final isRestDay = dayAcademicEvents.any((e) =>
+                    e.category == AcademicCalendarCategory.descansoObligatorio ||
+                    e.category == AcademicCalendarCategory.vacaciones);
+
                 final visibleDaySessions =
-                    isWithinSchoolCycle(academicEvents, _selectedDay) ? daySessions : const [];
+                    isWithinSchoolCycle(academicEvents, _selectedDay) && !isRestDay ? daySessions : const [];
+
+                final visibleDayTasks = dayTasks;
 
                 return Column(
                   children: [
@@ -188,9 +194,6 @@ class _ScheduleCalendarViewState extends State<ScheduleCalendarView> {
                           _focusedDay = focusedDay;
                         });
                       },
-                      // `TableCalendar` trae su propia tipografía y colores: sin
-                      // esto el encabezado y los días quedaban con los valores por
-                      // defecto del paquete, ajenos al resto de la app.
                       headerStyle: HeaderStyle(
                         formatButtonVisible: false,
                         titleCentered: true,
@@ -234,8 +237,6 @@ class _ScheduleCalendarViewState extends State<ScheduleCalendarView> {
                           color: colorScheme.primary,
                           shape: BoxShape.circle,
                         ),
-                        // Sin fijarlo, el día seleccionado conservaba el color de
-                        // texto por defecto sobre el círculo primario.
                         selectedTextStyle: TextStyle(
                           color: colorScheme.onPrimary,
                           fontWeight: FontWeight.w600,
@@ -247,10 +248,6 @@ class _ScheduleCalendarViewState extends State<ScheduleCalendarView> {
                         markersMaxCount: 3,
                       ),
                       calendarBuilders: CalendarBuilders<TaskItem>(
-                        // Días cubiertos por un evento del calendario IPN se tiñen
-                        // con el color/ícono de su categoría — salvo que ese mismo
-                        // día tenga un examen/evento del alumno en alta prioridad,
-                        // en cuyo caso ese evento del alumno gana el slot visual.
                         defaultBuilder: (context, day, focusedDay) {
                           final winningTask = highPriorityStudentEventForDay(tasks, day);
                           if (winningTask != null) {
@@ -278,6 +275,14 @@ class _ScheduleCalendarViewState extends State<ScheduleCalendarView> {
                       child: ListView(
                         padding: const EdgeInsets.all(AppSpacing.lg),
                         children: [
+                          if (isRestDay)
+                            const Padding(
+                              padding: EdgeInsets.only(bottom: AppSpacing.md),
+                              child: InlineStatus(
+                                icon: Symbols.celebration_rounded,
+                                message: '¡Día de descanso! Disfruta tu tiempo libre.',
+                              ),
+                            ),
                           if (dayAcademicEvents.isNotEmpty) ...[
                             SectionHeader(
                               title: 'Calendario IPN',
@@ -325,31 +330,35 @@ class _ScheduleCalendarViewState extends State<ScheduleCalendarView> {
                             ],
                             const SizedBox(height: AppSpacing.md),
                           ],
-                          SectionHeader(title: 'Tareas', count: dayTasks.length),
-                          if (dayTasks.isEmpty)
-                            const InlineStatus(
-                              icon: Symbols.event_available_rounded,
-                              message: 'Sin tareas para este día.',
-                            )
-                          else
-                            for (final task in dayTasks) ...[
-                              FadeSlideIn(
-                                child: AppCard(
-                                  padding: EdgeInsets.zero,
-                                  child: AppListRow(
-                                    icon: resolveTaskIcon(task.iconKey),
-                                    iconColor: task.isCompleted
-                                        ? colorScheme.onSurfaceVariant
-                                        : priorityColor(colorScheme, task.priority),
-                                    title: task.title,
-                                    strikethrough: task.isCompleted,
-                                    subtitle: task.isCompleted ? 'Completada' : null,
-                                    trailing: PriorityFlag(priority: task.priority),
+                          if (!isRestDay) ...[
+                            SectionHeader(title: 'Tareas', count: visibleDayTasks.length),
+                            if (visibleDayTasks.isEmpty)
+                              const InlineStatus(
+                                icon: Symbols.event_available_rounded,
+                                message: 'Sin tareas para este día.',
+                              )
+                            else
+                              for (final task in visibleDayTasks) ...[
+                                FadeSlideIn(
+                                  child: AppCard(
+                                    padding: EdgeInsets.zero,
+                                    child: AppListRow(
+                                      icon: resolveTaskIcon(task.iconKey),
+                                      iconColor: task.isCompleted
+                                          ? colorScheme.onSurfaceVariant
+                                          : priorityColor(colorScheme, task.priority),
+                                      title: task.title,
+                                      strikethrough: task.isCompleted,
+                                      subtitle: task.isCompleted
+                                          ? 'Completada'
+                                          : (task.hasTime ? DateFormat("h:mm a", 'es_MX').format(task.dueDate!) : null),
+                                      trailing: PriorityFlag(priority: task.priority),
+                                    ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(height: AppSpacing.sm),
-                            ],
+                                const SizedBox(height: AppSpacing.sm),
+                              ],
+                          ],
                         ],
                       ),
                     ),

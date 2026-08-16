@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../../../core/di/injection.dart';
@@ -348,10 +349,15 @@ class _DayDetail extends StatelessWidget {
                 calendarState is CalendarLoaded ? calendarState.events : const <AcademicCalendarEvent>[];
             final dayAcademicEvents = academicEvents.where((e) => e.coversDay(selectedDay)).toList();
             final winningTask = highPriorityStudentEventForDay(tasks, selectedDay);
-            // El Horario del SAES no sabe de vacaciones: sólo se listan
-            // clases si el día cae dentro del ciclo escolar activo.
+            
+            final isRestDay = dayAcademicEvents.any((e) =>
+                e.category == AcademicCalendarCategory.descansoObligatorio ||
+                e.category == AcademicCalendarCategory.vacaciones);
+
             final visibleDaySessions =
-                isWithinSchoolCycle(academicEvents, selectedDay) ? daySessions : const [];
+                isWithinSchoolCycle(academicEvents, selectedDay) && !isRestDay ? daySessions : const [];
+            
+            final visibleDayTasks = dayTasks;
 
             return BlocBuilder<ReinscriptionCubit, ReinscriptionState>(
               builder: (context, reinscriptionState) {
@@ -368,6 +374,14 @@ class _DayDetail extends StatelessWidget {
                   key: ValueKey(selectedDay),
                   padding: const EdgeInsets.all(AppSpacing.lg),
                   children: [
+                    if (isRestDay)
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: AppSpacing.md),
+                        child: InlineStatus(
+                          icon: Symbols.celebration_rounded,
+                          message: '¡Día de descanso! Disfruta tu tiempo libre.',
+                        ),
+                      ),
                     if (citaToday && winningTask == null) ...[
                       FadeSlideIn(
                         child: AppCard(
@@ -381,9 +395,6 @@ class _DayDetail extends StatelessWidget {
                       ),
                       const SizedBox(height: AppSpacing.md),
                     ],
-                    // Regla de prioridad: si hay un evento del alumno en alta
-                    // prioridad ese día, se muestra primero y el evento IPN se
-                    // sigue listando pero sin ganar el color/ícono destacado.
                     if (dayAcademicEvents.isNotEmpty && winningTask == null) ...[
                       SectionHeader(title: 'Calendario IPN', count: dayAcademicEvents.length),
                       for (final event in dayAcademicEvents) ...[
@@ -414,14 +425,14 @@ class _DayDetail extends StatelessWidget {
                       ],
                       const SizedBox(height: AppSpacing.md),
                     ],
-                    SectionHeader(title: 'Tareas', count: dayTasks.length),
-                    if (dayTasks.isEmpty)
+                    SectionHeader(title: 'Tareas', count: visibleDayTasks.length),
+                    if (visibleDayTasks.isEmpty)
                       const InlineStatus(
                         icon: Symbols.event_available_rounded,
                         message: 'Sin tareas para este día.',
                       )
                     else
-                      for (final task in dayTasks) ...[
+                      for (final task in visibleDayTasks) ...[
                         FadeSlideIn(
                           child: AppCard(
                             padding: EdgeInsets.zero,
@@ -438,14 +449,16 @@ class _DayDetail extends StatelessWidget {
                                   decoration: task.isCompleted ? TextDecoration.lineThrough : null,
                                 ),
                               ),
-                              subtitle: task.isCompleted ? const Text('Completada') : null,
+                              subtitle: task.isCompleted
+                                  ? const Text('Completada')
+                                  : (task.hasTime ? Text(DateFormat("h:mm a", 'es_MX').format(task.dueDate!)) : null),
                               trailing: PriorityFlag(priority: task.priority),
                             ),
                           ),
                         ),
                         const SizedBox(height: AppSpacing.sm),
                       ],
-                    if (entries.isEmpty && visibleDaySessions.isEmpty && dayTasks.isEmpty)
+                    if (entries.isEmpty && visibleDaySessions.isEmpty && visibleDayTasks.isEmpty)
                       const Padding(
                         padding: EdgeInsets.only(top: AppSpacing.md),
                         child: InlineStatus(

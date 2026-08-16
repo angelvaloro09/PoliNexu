@@ -14,4 +14,5 @@ class Tasks extends Table {
   TextColumn get iconKey => text().nullable()();
   BoolColumn get alarmEnabled => boolean().withDefault(const Constant(true))();
   TextColumn get subject => text().nullable()();
+  BoolColumn get hasTime => boolean().withDefault(const Constant(false))();
 }

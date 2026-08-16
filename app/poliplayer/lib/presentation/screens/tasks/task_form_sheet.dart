@@ -6,13 +6,11 @@ import '../../../core/constants/task_icons.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
+import '../../../core/theme/app_motion.dart';
 import '../../../domain/models/task_item.dart';
 import '../../blocs/tasks/tasks_cubit.dart';
 import '../../widgets/app_snack.dart';
 
-/// Abre el formulario de alta/edición de una tarea. Pasa [task] para editar
-/// una existente; omítelo para crear una nueva. [subjectOptions] alimenta el
-/// autocompletado de materia (normalmente las materias del horario actual).
 void showTaskFormSheet(
   BuildContext context, {
   required TasksCubit cubit,
@@ -22,8 +20,6 @@ void showTaskFormSheet(
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
-    // La forma y el asa de arrastre vienen del `bottomSheetTheme`; antes se
-    // pasaban a mano en esta llamada y no había asa.
     useSafeArea: true,
     builder: (_) => _TaskFormSheet(cubit: cubit, task: task, subjectOptions: subjectOptions),
   );
@@ -46,6 +42,7 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
   late final TextEditingController _descriptionController;
   late final TextEditingController _subjectController;
   DateTime? _dueDate;
+  TimeOfDay? _dueTime;
   late TaskPriority _priority;
   late TaskType _type;
   late String _iconKey;
@@ -60,6 +57,9 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
     _descriptionController = TextEditingController(text: widget.task?.description ?? '');
     _subjectController = TextEditingController(text: widget.task?.subject ?? '');
     _dueDate = widget.task?.dueDate;
+    if (widget.task?.hasTime == true && _dueDate != null) {
+      _dueTime = TimeOfDay.fromDateTime(_dueDate!);
+    }
     _priority = widget.task?.priority ?? TaskPriority.medium;
     _type = widget.task?.type ?? TaskType.tarea;
     _iconKey = widget.task?.iconKey ?? defaultTaskIconKey;
@@ -81,43 +81,78 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
       firstDate: DateTime.now().subtract(const Duration(days: 365)),
       lastDate: DateTime.now().add(const Duration(days: 365 * 3)),
     );
-    if (picked != null) setState(() => _dueDate = picked);
+    if (picked != null) {
+      setState(() {
+        if (_dueDate != null) {
+          _dueDate = DateTime(
+            picked.year,
+            picked.month,
+            picked.day,
+            _dueDate!.hour,
+            _dueDate!.minute,
+          );
+        } else {
+          _dueDate = picked;
+        }
+      });
+    }
+  }
+
+  Future<void> _pickDueTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _dueTime ?? TimeOfDay.now(),
+    );
+    if (picked != null) {
+      setState(() {
+        _dueTime = picked;
+        if (_dueDate == null) {
+          final now = DateTime.now();
+          _dueDate = DateTime(now.year, now.month, now.day, picked.hour, picked.minute);
+        } else {
+          _dueDate = DateTime(
+            _dueDate!.year,
+            _dueDate!.month,
+            _dueDate!.day,
+            picked.hour,
+            picked.minute,
+          );
+        }
+      });
+    }
   }
 
   void _submit() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
-    final title = _titleController.text.trim();
-    final description = _descriptionController.text.trim();
     final subject = _subjectController.text.trim();
+    // Exámenes toman la materia como título.
+    final title = _type == TaskType.examen ? subject : _titleController.text.trim();
+    final description = _descriptionController.text.trim();
+
+    final taskToSave = TaskItem(
+      id: widget.task?.id,
+      title: title,
+      description: description.isEmpty ? null : description,
+      dueDate: _dueDate,
+      hasTime: _dueTime != null,
+      priority: _priority,
+      createdAt: widget.task?.createdAt ?? DateTime.now(),
+      type: _type,
+      iconKey: _iconKey,
+      alarmEnabled: _alarmEnabled,
+      subject: subject.isEmpty ? null : subject,
+      isCompleted: widget.task?.isCompleted ?? false,
+    );
 
     if (_isEditing) {
-      widget.cubit.updateTask(widget.task!.copyWith(
-        title: title,
-        description: description.isEmpty ? null : description,
-        dueDate: _dueDate,
-        priority: _priority,
-        type: _type,
-        iconKey: _iconKey,
-        alarmEnabled: _alarmEnabled,
-        subject: subject.isEmpty ? null : subject,
-      ));
+      widget.cubit.updateTask(taskToSave);
     } else {
-      widget.cubit.addTask(TaskItem(
-        title: title,
-        description: description.isEmpty ? null : description,
-        dueDate: _dueDate,
-        priority: _priority,
-        createdAt: DateTime.now(),
-        type: _type,
-        iconKey: _iconKey,
-        alarmEnabled: _alarmEnabled,
-        subject: subject.isEmpty ? null : subject,
-      ));
+      widget.cubit.addTask(taskToSave);
     }
 
     Navigator.of(context).pop();
-    AppSnack.success(context, _isEditing ? 'Tarea actualizada' : 'Tarea creada');
+    AppSnack.success(context, _isEditing ? 'Actualizada exitosamente' : 'Guardada exitosamente');
   }
 
   void _delete() {
@@ -135,6 +170,9 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+
+    final isExam = _type == TaskType.examen;
+    final isPersonal = _type == TaskType.eventoImportante;
 
     return Padding(
       padding: EdgeInsets.only(
@@ -158,8 +196,6 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
                       style: theme.textTheme.sectionTitle,
                     ),
                   ),
-                  // Borrar sólo se podía deslizando en la lista: quien abre la
-                  // tarea para editarla no tenía forma de eliminarla desde aquí.
                   if (_isEditing)
                     IconButton(
                       onPressed: _delete,
@@ -174,68 +210,104 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
                 segments: const [
                   ButtonSegment(value: TaskType.tarea, label: Text('Tarea')),
                   ButtonSegment(value: TaskType.examen, label: Text('Examen')),
-                  ButtonSegment(value: TaskType.eventoImportante, label: Text('Evento')),
+                  ButtonSegment(value: TaskType.eventoImportante, label: Text('Personal')),
                 ],
                 selected: {_type},
                 onSelectionChanged: (selection) => setState(() => _type = selection.first),
               ),
               const SizedBox(height: AppSpacing.lg),
-              TextFormField(
-                controller: _titleController,
-                autofocus: !_isEditing,
-                decoration: const InputDecoration(labelText: 'Título'),
-                validator: (value) =>
-                    value == null || value.trim().isEmpty ? 'Ingresa un título' : null,
+              AnimatedSize(
+                duration: AppMotion.normal,
+                curve: AppMotion.standard,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (!isExam) ...[
+                      TextFormField(
+                        controller: _titleController,
+                        autofocus: !_isEditing,
+                        decoration: const InputDecoration(labelText: 'Título'),
+                        validator: (value) =>
+                            value == null || value.trim().isEmpty ? 'Ingresa un título' : null,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                    ],
+                    TextFormField(
+                      controller: _descriptionController,
+                      decoration: const InputDecoration(labelText: 'Descripción (opcional)'),
+                      minLines: 1,
+                      maxLines: 3,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    if (!isPersonal) ...[
+                      Autocomplete<String>(
+                        initialValue: TextEditingValue(text: _subjectController.text),
+                        optionsBuilder: (value) {
+                          if (value.text.isEmpty) return widget.subjectOptions;
+                          final query = value.text.toLowerCase();
+                          return widget.subjectOptions.where((s) => s.toLowerCase().contains(query));
+                        },
+                        onSelected: (selection) => _subjectController.text = selection,
+                        fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
+                          controller.text = _subjectController.text;
+                          controller.addListener(() => _subjectController.text = controller.text);
+                          return TextFormField(
+                            controller: controller,
+                            focusNode: focusNode,
+                            decoration: InputDecoration(
+                              labelText: isExam ? 'Materia (Obligatorio)' : 'Materia (Opcional)',
+                            ),
+                            validator: isExam
+                                ? (value) => value == null || value.trim().isEmpty
+                                    ? 'Ingresa la materia para el examen'
+                                    : null
+                                : null,
+                          );
+                        },
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                    ],
+                  ],
+                ),
               ),
-              const SizedBox(height: AppSpacing.md),
-              TextFormField(
-                controller: _descriptionController,
-                decoration: const InputDecoration(labelText: 'Descripción (opcional)'),
-                minLines: 1,
-                maxLines: 3,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Autocomplete<String>(
-                initialValue: TextEditingValue(text: _subjectController.text),
-                optionsBuilder: (value) {
-                  if (value.text.isEmpty) return widget.subjectOptions;
-                  final query = value.text.toLowerCase();
-                  return widget.subjectOptions
-                      .where((s) => s.toLowerCase().contains(query));
-                },
-                onSelected: (selection) => _subjectController.text = selection,
-                fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
-                  // Sincroniza el controller real (el de Autocomplete es interno)
-                  // con el que se usa para guardar en `_submit`.
-                  controller.text = _subjectController.text;
-                  controller.addListener(() => _subjectController.text = controller.text);
-                  return TextFormField(
-                    controller: controller,
-                    focusNode: focusNode,
-                    decoration: const InputDecoration(labelText: 'Materia (opcional)'),
-                  );
-                },
-              ),
-              const SizedBox(height: AppSpacing.md),
               Row(
                 children: [
                   Expanded(
+                    flex: 3,
                     child: OutlinedButton.icon(
                       onPressed: _pickDueDate,
                       icon: const Icon(Symbols.event_rounded, size: AppIconSize.sm),
                       label: Text(
                         _dueDate == null
-                            ? 'Fecha límite'
-                            : DateFormat("d 'de' MMMM, y", 'es_MX').format(_dueDate!),
+                            ? (isExam ? 'Fecha del examen' : 'Fecha límite')
+                            : DateFormat("d MMM, y", 'es_MX').format(_dueDate!),
                       ),
                     ),
                   ),
-                  if (_dueDate != null)
-                    IconButton(
-                      onPressed: () => setState(() => _dueDate = null),
-                      icon: const Icon(Symbols.close_rounded),
-                      tooltip: 'Quitar fecha',
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    flex: 2,
+                    child: OutlinedButton.icon(
+                      onPressed: _pickDueTime,
+                      icon: const Icon(Symbols.schedule_rounded, size: AppIconSize.sm),
+                      label: Text(
+                        _dueTime == null ? 'Hora' : _dueTime!.format(context),
+                      ),
                     ),
+                  ),
+                  if (_dueDate != null || _dueTime != null) ...[
+                    const SizedBox(width: AppSpacing.xs),
+                    IconButton(
+                      onPressed: () {
+                        setState(() {
+                          _dueDate = null;
+                          _dueTime = null;
+                        });
+                      },
+                      icon: const Icon(Symbols.close_rounded),
+                      tooltip: 'Limpiar fecha',
+                    ),
+                  ],
                 ],
               ),
               const SizedBox(height: AppSpacing.md),
@@ -251,23 +323,39 @@ class _TaskFormSheetState extends State<_TaskFormSheet> {
                 selected: {_priority},
                 onSelectionChanged: (selection) => setState(() => _priority = selection.first),
               ),
-              const SizedBox(height: AppSpacing.md),
+              const SizedBox(height: AppSpacing.lg),
               Text('Ícono',
                   style: theme.textTheme.meta?.copyWith(color: colorScheme.onSurfaceVariant)),
               const SizedBox(height: AppSpacing.sm),
-              Wrap(
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.sm,
-                children: [
-                  for (final entry in taskIcons.entries)
-                    _IconChoice(
-                      icon: entry.value,
-                      selected: entry.key == _iconKey,
-                      onTap: () => setState(() => _iconKey = entry.key),
-                    ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.md),
+              ...taskIconCategories.entries.map((category) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        category.key,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Wrap(
+                        spacing: AppSpacing.sm,
+                        runSpacing: AppSpacing.sm,
+                        children: category.value.entries.map((entry) {
+                          return _IconChoice(
+                            icon: entry.value,
+                            selected: entry.key == _iconKey,
+                            onTap: () => setState(() => _iconKey = entry.key),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ),
+                );
+              }),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Programar alarma'),

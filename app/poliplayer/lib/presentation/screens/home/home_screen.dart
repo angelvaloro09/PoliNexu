@@ -9,7 +9,10 @@ import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/weekday.dart';
+import '../../../domain/models/academic_calendar_event.dart';
 import '../../../domain/models/schedule_entry.dart';
+import '../../blocs/calendar/calendar_cubit.dart';
+import '../../blocs/calendar/calendar_state.dart';
 import '../../blocs/schedule/schedule_cubit.dart';
 import '../../blocs/schedule/schedule_state.dart';
 import '../../blocs/tasks/tasks_cubit.dart';
@@ -31,6 +34,7 @@ class HomeScreen extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider<ScheduleCubit>.value(value: getIt<ScheduleCubit>()..loadSchedule()),
+        BlocProvider<CalendarCubit>.value(value: getIt<CalendarCubit>()..loadAcademicCalendar()),
         BlocProvider<TasksCubit>.value(value: getIt<TasksCubit>()),
       ],
       child: const _HomeView(),
@@ -50,57 +54,83 @@ class _HomeView extends StatelessWidget {
     return Scaffold(
       body: RefreshIndicator(
         onRefresh: () => context.read<ScheduleCubit>().loadSchedule(force: true),
-        child: CustomScrollView(
-          slivers: [
-            SliverAppBar.large(
-              title: Text(
-                _greeting(today),
-                style: theme.textTheme.heroTitle?.copyWith(color: colorScheme.onSurface),
-              ),
-              backgroundColor: colorScheme.surface,
-              scrolledUnderElevation: 0,
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                0, // El AppBar ya provee espaciado superior
-                AppSpacing.lg,
-                AppSpacing.xxl,
-              ),
-              sliver: SliverList(
-                delegate: SliverChildListDelegate([
-                  AnimatedEntrance(
-                    index: 0,
-                    child: Text(
-                      _capitalize(DateFormat("EEEE d 'de' MMMM", 'es_MX').format(today)),
-                      style: theme.textTheme.body?.copyWith(color: colorScheme.onSurfaceVariant),
-                    ),
+        child: BlocBuilder<CalendarCubit, CalendarState>(
+          builder: (context, calendarState) {
+            final academicEvents =
+                calendarState is CalendarLoaded ? calendarState.events : const <AcademicCalendarEvent>[];
+            final dayAcademicEvents =
+                academicEvents.where((e) => e.coversDay(today)).toList();
+            final isRestDay = dayAcademicEvents.any((e) =>
+                e.category == AcademicCalendarCategory.descansoObligatorio ||
+                e.category == AcademicCalendarCategory.vacaciones);
+
+            return CustomScrollView(
+              slivers: [
+                SliverAppBar.large(
+                  title: Text(
+                    _greeting(today),
+                    style: theme.textTheme.heroTitle?.copyWith(color: colorScheme.onSurface),
                   ),
-                  const SizedBox(height: AppSpacing.xl),
-                  AnimatedEntrance(
-                    index: 1,
-                    child: _NextClassCard(today: today),
+                  backgroundColor: colorScheme.surface,
+                  scrolledUnderElevation: 0,
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    0, // El AppBar ya provee espaciado superior
+                    AppSpacing.lg,
+                    AppSpacing.xxl,
                   ),
-                  const SizedBox(height: AppSpacing.xl),
-                  const AnimatedEntrance(
-                    index: 2,
-                    child: SectionHeader(title: 'Clases de hoy'),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate([
+                      AnimatedEntrance(
+                        index: 0,
+                        child: Text(
+                          _capitalize(DateFormat("EEEE d 'de' MMMM", 'es_MX').format(today)),
+                          style: theme.textTheme.body?.copyWith(color: colorScheme.onSurfaceVariant),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      if (isRestDay) ...[
+                        AnimatedEntrance(
+                          index: 1,
+                          child: const AppCard(
+                            padding: EdgeInsets.all(AppSpacing.lg),
+                            child: InlineStatus(
+                              icon: Symbols.celebration_rounded,
+                              message: '¡Día de descanso! Disfruta tu tiempo libre.',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.xl),
+                      ] else ...[
+                        AnimatedEntrance(
+                          index: 1,
+                          child: _NextClassCard(today: today),
+                        ),
+                        const SizedBox(height: AppSpacing.xl),
+                        const AnimatedEntrance(
+                          index: 2,
+                          child: SectionHeader(title: 'Clases de hoy'),
+                        ),
+                        _TodayScheduleSection(today: today, startIndex: 3),
+                        const SizedBox(height: AppSpacing.xl),
+                      ],
+                      AnimatedEntrance(
+                        index: 4,
+                        child: SectionHeader(
+                          title: 'Tareas pendientes',
+                          actionLabel: 'Ver todas',
+                          onAction: () => context.go('/tasks'),
+                        ),
+                      ),
+                      _PendingTasksSection(today: today, startIndex: 5),
+                    ]),
                   ),
-                  _TodayScheduleSection(today: today, startIndex: 3),
-                  const SizedBox(height: AppSpacing.xl),
-                  AnimatedEntrance(
-                    index: 4,
-                    child: SectionHeader(
-                      title: 'Tareas pendientes',
-                      actionLabel: 'Ver todas',
-                      onAction: () => context.go('/tasks'),
-                    ),
-                  ),
-                  _PendingTasksSection(today: today, startIndex: 5),
-                ]),
-              ),
-            ),
-          ],
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -389,7 +419,7 @@ class _PendingTasksSection extends StatelessWidget {
                     title: pending[i].title,
                     subtitle: pending[i].dueDate!.isBefore(startOfToday)
                         ? 'Venció el ${DateFormat('d MMM', 'es_MX').format(pending[i].dueDate!)}'
-                        : 'Vence hoy',
+                        : 'Vence hoy${pending[i].hasTime ? DateFormat(" 'a las' h:mm a", 'es_MX').format(pending[i].dueDate!) : ''}',
                     trailing: PriorityFlag(priority: pending[i].priority),
                   ),
                 ),

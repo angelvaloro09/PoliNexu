@@ -279,13 +279,22 @@ class _TaskTile extends StatelessWidget {
     final dueDay = DateTime(due.year, due.month, due.day);
     final days = dueDay.difference(today).inDays;
 
+    final timeStr = task.hasTime ? DateFormat(" 'a las' h:mm a", 'es_MX').format(due) : '';
+    
+    final isExamOrEvent = task.type == TaskType.examen || task.type == TaskType.eventoImportante;
+    final prefixHoy = isExamOrEvent ? 'Hoy' : 'Vence hoy';
+    final prefixManana = isExamOrEvent ? 'Mañana' : 'Vence mañana';
+    final prefixAyer = isExamOrEvent ? 'Fue ayer' : 'Venció ayer';
+    final prefixPasado = isExamOrEvent ? 'Fue el' : 'Venció el';
+    final prefixFuturo = isExamOrEvent ? 'En' : 'Vence en';
+
     return switch (days) {
-      0 => 'Vence hoy',
-      1 => 'Vence mañana',
-      -1 => 'Venció ayer',
-      < 0 => 'Venció el ${DateFormat("d 'de' MMMM", 'es_MX').format(due)}',
-      < 7 => 'Vence en $days días',
-      _ => DateFormat("d 'de' MMMM", 'es_MX').format(due),
+      0 => '$prefixHoy$timeStr',
+      1 => '$prefixManana$timeStr',
+      -1 => '$prefixAyer$timeStr',
+      < 0 => '$prefixPasado ${DateFormat("d 'de' MMMM", 'es_MX').format(due)}$timeStr',
+      < 7 => '$prefixFuturo $days días$timeStr',
+      _ => '${DateFormat("d 'de' MMMM", 'es_MX').format(due)}$timeStr',
     };
   }
 }
