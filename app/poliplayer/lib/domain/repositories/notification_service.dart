@@ -28,4 +28,16 @@ abstract class NotificationService {
   /// los de [events] — cancela los anteriores y programa un aviso a las
   /// 9:00 a.m. del día anterior al inicio de cada evento.
   Future<void> scheduleAcademicCalendarNotifications(List<AcademicCalendarEvent> events);
+
+  /// Notifica que el SAES cerró la sesión. Se dedupe internamente — llamar
+  /// varias veces seguidas (un fetch fallido por pantalla) sólo muestra una.
+  Future<void> notifySessionExpired();
+
+  /// Resetea la deduplicación de [notifySessionExpired] — llamar cuando la
+  /// sesión vuelve a quedar válida (login o re-login exitosos).
+  Future<void> clearSessionExpiredNotice();
+
+  /// Alarma única 30 minutos antes de [citaInicio] — reemplaza cualquier
+  /// aviso de reinscripción previo (sólo puede haber una cita vigente).
+  Future<void> scheduleReinscriptionReminder(DateTime citaInicio);
 }

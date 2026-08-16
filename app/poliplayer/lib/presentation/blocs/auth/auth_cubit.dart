@@ -5,13 +5,16 @@ import '../../../core/constants/saes_schools.dart';
 import '../../../domain/models/session_restore_result.dart';
 import '../../../domain/repositories/app_preferences.dart';
 import '../../../domain/repositories/auth_repository.dart';
+import '../../../domain/repositories/notification_service.dart';
 import 'auth_state.dart';
 
 class AuthCubit extends Cubit<AuthState> {
   final AuthRepository _authRepository;
   final AppPreferences _preferences;
+  final NotificationService _notificationService;
 
-  AuthCubit(this._authRepository, this._preferences) : super(AuthInitial());
+  AuthCubit(this._authRepository, this._preferences, this._notificationService)
+      : super(AuthInitial());
 
   /// Reanuda la sesión guardada al arrancar la app. Decide entre entrar
   /// directo, pedir sólo el CAPTCHA, o mandar al login completo.
@@ -35,6 +38,7 @@ class AuthCubit extends Cubit<AuthState> {
 
     switch (result) {
       case SessionRestoreResult.authenticated:
+        await _notificationService.clearSessionExpiredNotice();
         emit(const AuthSessionRestored());
       case SessionRestoreResult.offline:
         emit(const AuthSessionRestored(offline: true));
@@ -75,6 +79,7 @@ class AuthCubit extends Cubit<AuthState> {
     try {
       final result = await _authRepository.reauth(captchaText: captchaText);
       if (result.success) {
+        await _notificationService.clearSessionExpiredNotice();
         emit(const AuthSessionRestored());
         return;
       }
@@ -88,16 +93,18 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
-  /// Ping al volver a primer plano. Devuelve `false` si la sesión ya no sirve;
-  /// en ese caso deja emitido el estado al que la UI debe navegar
-  /// ([AuthReauthCaptchaLoading] o [AuthLoginRequired]).
+  /// Ping al volver a primer plano: resetea el sliding timeout si la sesión
+  /// sigue viva. Devuelve `false` si ya no sirve — la UI ya no navega sólo
+  /// por esto (modo offline: Inicio/Horario/Tareas se siguen viendo), así que
+  /// esto no precarga un CAPTCHA de re-login en segundo plano (es de un solo
+  /// uso, se pediría uno nuevo igual al entrar a `/reauth`). Cuando no hay
+  /// cuenta guardada sí conviene dejar el estado en `AuthLoginRequired` desde
+  /// ya, para que cualquier pantalla que dependa de `AuthCubit.state` lo vea.
   Future<bool> keepAliveOrReauth() async {
     if (await _authRepository.keepAlive()) return true;
 
     if (_authRepository.currentAccountId == null) {
       emit(AuthLoginRequired());
-    } else {
-      await startReauth();
     }
     return false;
   }
@@ -175,6 +182,7 @@ class AuthCubit extends Cubit<AuthState> {
     );
 
     if (result.success) {
+      await _notificationService.clearSessionExpiredNotice();
       emit(AuthLoginSuccess());
     } else {
       // Si falla, el CAPTCHA se invalida en el servidor. Lo recargamos automáticamente.

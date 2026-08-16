@@ -16,11 +16,18 @@ class GradesLoaded extends GradesState {
   final List<GradeEntry> entries;
   final DateTime fetchedAt;
   final bool fromCache;
+  final bool sessionExpired;
 
-  const GradesLoaded(this.entries, {required this.fetchedAt, this.fromCache = false});
+  const GradesLoaded(
+    this.entries, {
+    required this.fetchedAt,
+    this.fromCache = false,
+    this.sessionExpired = false,
+  });
 }
 
 class GradesError extends GradesState {
   final String message;
-  const GradesError(this.message);
+  final bool sessionRequired;
+  const GradesError(this.message, {this.sessionRequired = false});
 }

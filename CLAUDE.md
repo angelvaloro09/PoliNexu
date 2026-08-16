@@ -554,14 +554,16 @@ The splash holds for `AppMotion.intro` before navigating so the mark doesn't fla
 | `lib/core/theme/app_text_styles.dart` | `TextTheme` extension applying the type-weight scale |
 | `lib/presentation/router/app_router.dart` | `go_router` config — `buildAppRouter()` factory + `appRouter` singleton |
 | `lib/presentation/widgets/main_shell.dart` | Bottom `NavigationBar` shell for `/home`, `/schedule`, `/grades`, `/tasks` |
-| `lib/presentation/screens/schedule/schedule_screen.dart` | Real Horario screen (list of subjects + sessions per day) |
-| `lib/presentation/screens/grades/grades_screen.dart` | Real Calificaciones screen (parciales + final per subject) |
+| `lib/presentation/screens/schedule/schedule_screen.dart` | Horario screen — Semana (day-chip selector) / Calendario toggle, subject color+room override editing |
+| `lib/presentation/screens/schedule/schedule_calendar_view.dart` | Calendario view — unifies Horario (recurring by weekday) + task due dates + IPN calendar |
+| `lib/presentation/screens/schedule/schedule_override_sheet.dart` | Bottom sheet: per-subject color + per-(subject,day) building/classroom override |
+| `lib/domain/repositories/schedule_overrides_repository.dart` + impl | Local-only (Drift) subject color/room overrides, no backend |
+| `lib/presentation/screens/grades/grades_screen.dart` | Real Calificaciones screen (parciales + final per subject) — GPA simulator removed |
 | `lib/presentation/screens/kardex/kardex_screen.dart` | Kárdex screen (career/plan/average + semesters) — pushed from Grades' AppBar, not a bottom-nav tab |
-| `lib/presentation/screens/simulator/simulator_form.dart` | GPA simulator — simple (unweighted) average over real + hypothetical grades, pushed from Grades' AppBar |
 | `lib/presentation/widgets/status_view.dart` | Shared error/empty states (`StatusView`, `InlineStatus`) |
-| `lib/presentation/screens/tasks/tasks_screen.dart` | Tasks screen — Lista/Calendario tabs |
-| `lib/presentation/screens/tasks/task_form_sheet.dart` | Add/edit task bottom sheet |
-| `lib/presentation/screens/tasks/task_calendar_view.dart` | Calendar tab — unifies Horario (recurring by weekday) + task due dates |
+| `lib/presentation/screens/tasks/tasks_screen.dart` | Tasks screen — list only (calendar moved to Horario) |
+| `lib/presentation/screens/tasks/task_form_sheet.dart` | Add/edit task bottom sheet — type (tarea/examen/evento), icon picker, subject autocomplete, alarm toggle |
+| `lib/core/constants/task_icons.dart` | Curated icon set (key → `Symbols.*`) tasks/events can choose from |
 | `lib/data/database/app_database.dart` | Drift `AppDatabase` (native SQLite) |
 | `lib/presentation/blocs/tasks/tasks_cubit.dart` | Stream-driven Cubit (subscribes to `watchTasks()`, no `loadX()`) |
 | `lib/presentation/screens/home/home_screen.dart` | Home dashboard — today's classes + pending tasks |

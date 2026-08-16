@@ -3,13 +3,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
+import '../../../core/constants/task_icons.dart';
 import '../../../core/di/injection.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../domain/models/task_item.dart';
-import '../../blocs/calendar/calendar_cubit.dart';
 import '../../blocs/schedule/schedule_cubit.dart';
+import '../../blocs/schedule/schedule_state.dart';
 import '../../blocs/tasks/tasks_cubit.dart';
 import '../../blocs/tasks/tasks_state.dart';
 import '../../widgets/app_card.dart';
@@ -18,24 +19,28 @@ import '../../widgets/app_snack.dart';
 import '../../widgets/priority_flag.dart';
 import '../../widgets/skeleton.dart';
 import '../../widgets/status_view.dart';
-import 'task_calendar_view.dart';
 import 'task_form_sheet.dart';
 
+/// Materias del horario actual, para el autocompletado del formulario de
+/// tareas. `ScheduleCubit` es un singleton de `getIt` (ver injection.dart) —
+/// se lee directo su estado en vez de proveerlo aquí, esta pantalla no
+/// necesita reaccionar a sus cambios, sólo tomar una foto al abrir el form.
+List<String> _scheduleSubjects() {
+  final state = getIt<ScheduleCubit>().state;
+  if (state is! ScheduleLoaded) return const [];
+  return state.entries.map((e) => e.subject).toSet().toList()..sort();
+}
+
+/// El calendario (clases + tareas + calendario IPN) vive ahora en la pantalla
+/// Horario (`schedule_screen.dart`, vista "Calendario") — esta pantalla sólo
+/// es la lista de tareas.
 class TasksScreen extends StatelessWidget {
   const TasksScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider<TasksCubit>(create: (_) => getIt<TasksCubit>()),
-        // El Horario se usa en la pestaña Calendario para unificar clases + tareas.
-        BlocProvider<ScheduleCubit>(create: (_) => getIt<ScheduleCubit>()..loadSchedule()),
-        // Fechas institucionales del IPN (vacaciones, inicio/fin de semestre, etc.).
-        BlocProvider<CalendarCubit>(
-          create: (_) => getIt<CalendarCubit>()..loadAcademicCalendar(),
-        ),
-      ],
+    return BlocProvider<TasksCubit>.value(
+      value: getIt<TasksCubit>(),
       child: const _TasksView(),
     );
   }
@@ -46,32 +51,16 @@ class _TasksView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Tareas'),
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'Lista'),
-              Tab(text: 'Calendario'),
-            ],
-          ),
-        ),
-        // Extendido: en la vista de lista el botón principal merece etiqueta,
-        // y el ícono solo obligaba a adivinar qué crea.
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () => showTaskFormSheet(context, cubit: context.read<TasksCubit>()),
-          icon: const Icon(Symbols.add_rounded),
-          label: const Text('Nueva tarea'),
-        ),
-        body: const TabBarView(
-          children: [
-            _TaskListView(),
-            TaskCalendarView(),
-          ],
-        ),
+    return Scaffold(
+      appBar: AppBar(title: const Text('Tareas')),
+      // Extendido: en la vista de lista el botón principal merece etiqueta,
+      // y el ícono solo obligaba a adivinar qué crea.
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => showTaskFormSheet(context, cubit: context.read<TasksCubit>(), subjectOptions: _scheduleSubjects()),
+        icon: const Icon(Symbols.add_rounded),
+        label: const Text('Nueva tarea'),
       ),
+      body: const _TaskListView(),
     );
   }
 }
@@ -90,16 +79,16 @@ class _TaskListView extends StatelessWidget {
             ),
           TasksError(:final message) => StatusView.error(
               message: message,
-              // La lista viene de un Stream de Drift: reabrir el formulario no
-              // arregla nada, pero volver a la pestaña sí re-suscribe.
-              onRetry: () => DefaultTabController.of(context).animateTo(0),
+              // La lista viene de un Stream de Drift que ya está roto en este
+              // punto — no hay nada que reintentar sin reiniciar la app.
+              onRetry: () => AppSnack.error(context, 'Reinicia la app para continuar.'),
             ),
           TasksLoaded(:final tasks) when tasks.isEmpty => StatusView.empty(
               icon: Symbols.task_alt_rounded,
               title: 'Sin tareas',
               message: 'Anota entregas, exámenes o pendientes y te avisamos a tiempo.',
               actionLabel: 'Crear la primera',
-              onAction: () => showTaskFormSheet(context, cubit: context.read<TasksCubit>()),
+              onAction: () => showTaskFormSheet(context, cubit: context.read<TasksCubit>(), subjectOptions: _scheduleSubjects()),
             ),
           TasksLoaded(:final tasks) => _TaskList(tasks: _sorted(tasks)),
         };
@@ -202,10 +191,22 @@ class _TaskTile extends StatelessWidget {
       child: AppCard(
         padding: EdgeInsets.zero,
         child: AppListRow(
-          onTap: () => showTaskFormSheet(context, cubit: cubit, task: task),
-          leading: Checkbox(
-            value: task.isCompleted,
-            onChanged: (_) => cubit.toggleCompleted(task),
+          onTap: () => showTaskFormSheet(context, cubit: cubit, task: task, subjectOptions: _scheduleSubjects()),
+          leading: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Checkbox(
+                value: task.isCompleted,
+                onChanged: (_) => cubit.toggleCompleted(task),
+              ),
+              Icon(
+                resolveTaskIcon(task.iconKey),
+                size: AppIconSize.sm,
+                color: task.isCompleted
+                    ? colorScheme.onSurfaceVariant
+                    : priorityColor(colorScheme, task.priority),
+              ),
+            ],
           ),
           title: task.title,
           strikethrough: task.isCompleted,

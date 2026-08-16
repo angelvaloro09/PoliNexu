@@ -35,7 +35,7 @@ class SectionHeader extends StatelessWidget {
         children: [
           Flexible(
             child: Text(
-              title,
+              count != null ? '$title:' : title,
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.sectionTitle?.copyWith(color: colorScheme.onSurface),
             ),

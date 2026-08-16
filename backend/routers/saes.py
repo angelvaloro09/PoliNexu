@@ -1,12 +1,26 @@
 import requests
 from fastapi import APIRouter, HTTPException
 
-from core.saes_pages import GRADES_PATH, KARDEX_PATH, SCHEDULE_PATH
+from core.saes_pages import (
+    ACADEMIC_STATUS_PATH,
+    GRADES_PATH,
+    KARDEX_PATH,
+    REINSCRIPTION_PATH,
+    SCHEDULE_PATH,
+)
 from core.schools import get_school
-from models.schemas import GradesResponse, KardexResponse, ScheduleResponse
+from models.schemas import (
+    AcademicStatusResponse,
+    GradesResponse,
+    KardexResponse,
+    ReinscriptionResponse,
+    ScheduleResponse,
+)
+from services.parsers.academic_status_parser import parse_academic_status
 from services.parsers.grades_parser import parse_grades
 from services.parsers.horario_parser import parse_schedule
 from services.parsers.kardex_parser import parse_kardex
+from services.parsers.reinscription_parser import parse_reinscription
 from services.saes_scraper import decode_html
 from services.session_manager import SaesSessionState, session_manager
 
@@ -73,3 +87,17 @@ def get_kardex(session_token: str) -> KardexResponse:
     state, school = _authenticated_state(session_token)
     html = _fetch_authenticated_page(state, school, KARDEX_PATH, session_token)
     return KardexResponse(**parse_kardex(html))
+
+
+@router.get("/academic-status", response_model=AcademicStatusResponse)
+def get_academic_status(session_token: str) -> AcademicStatusResponse:
+    state, school = _authenticated_state(session_token)
+    html = _fetch_authenticated_page(state, school, ACADEMIC_STATUS_PATH, session_token)
+    return AcademicStatusResponse(**parse_academic_status(html))
+
+
+@router.get("/reinscription", response_model=ReinscriptionResponse)
+def get_reinscription(session_token: str) -> ReinscriptionResponse:
+    state, school = _authenticated_state(session_token)
+    html = _fetch_authenticated_page(state, school, REINSCRIPTION_PATH, session_token)
+    return ReinscriptionResponse(**parse_reinscription(html))

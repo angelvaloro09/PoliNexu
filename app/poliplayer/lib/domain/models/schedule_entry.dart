@@ -16,12 +16,14 @@ class ScheduleSession {
 
 class ScheduleEntry {
   final String group;
+  final String? code;
   final String subject;
   final String teachers;
   final List<ScheduleSession> sessions;
 
   const ScheduleEntry({
     required this.group,
+    this.code,
     required this.subject,
     required this.teachers,
     required this.sessions,

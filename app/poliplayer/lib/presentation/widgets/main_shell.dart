@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../blocs/auth/auth_cubit.dart';
-import '../blocs/auth/auth_state.dart';
 
 class _ShellDestination {
   final String path;
@@ -21,7 +20,7 @@ class _ShellDestination {
 const _destinations = [
   _ShellDestination(path: '/home', label: 'Inicio', icon: Symbols.home_rounded),
   _ShellDestination(path: '/schedule', label: 'Horario', icon: Symbols.calendar_today_rounded),
-  _ShellDestination(path: '/grades', label: 'Calificaciones', icon: Symbols.school_rounded),
+  _ShellDestination(path: '/grades', label: 'Notas', icon: Symbols.school_rounded),
   _ShellDestination(path: '/tasks', label: 'Tareas', icon: Symbols.checklist_rounded),
 ];
 
@@ -61,18 +60,15 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
   }
 
   /// Al volver a primer plano se hace ping al SAES: resetea el sliding timeout
-  /// de la sesión y, si ya estaba muerta, manda al re-login sólo-CAPTCHA en vez
-  /// de esperar a que falle la primera pantalla que pida datos.
+  /// de la sesión. Ya no navega automáticamente si murió — modo offline:
+  /// Inicio/Horario/Tareas se siguen viendo con lo último en caché; la
+  /// notificación de sesión muerta (disparada por el repo en el próximo fetch
+  /// fallido) es el aviso, y sólo se pide re-login al entrar a una pantalla
+  /// que de verdad lo requiera (Notas/Kárdex).
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed) return;
-
-    final cubit = context.read<AuthCubit>();
-    cubit.keepAliveOrReauth().then((alive) {
-      if (alive || !mounted) return;
-      // El cubit ya dejó emitido a dónde hay que ir.
-      context.go(cubit.state is AuthLoginRequired ? '/login' : '/reauth');
-    });
+    context.read<AuthCubit>().keepAliveOrReauth();
   }
 
   @override

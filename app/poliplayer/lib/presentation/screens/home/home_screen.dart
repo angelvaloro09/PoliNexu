@@ -29,8 +29,8 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider<ScheduleCubit>(create: (_) => getIt<ScheduleCubit>()..loadSchedule()),
-        BlocProvider<TasksCubit>(create: (_) => getIt<TasksCubit>()),
+        BlocProvider<ScheduleCubit>.value(value: getIt<ScheduleCubit>()..loadSchedule()),
+        BlocProvider<TasksCubit>.value(value: getIt<TasksCubit>()),
       ],
       child: const _HomeView(),
     );
@@ -49,7 +49,7 @@ class _HomeView extends StatelessWidget {
     return Scaffold(
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: () => context.read<ScheduleCubit>().loadSchedule(),
+          onRefresh: () => context.read<ScheduleCubit>().loadSchedule(force: true),
           child: ListView(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.lg,
@@ -242,7 +242,7 @@ class _TodayScheduleSection extends StatelessWidget {
               icon: Symbols.cloud_off_rounded,
               message: 'No se pudo cargar tu horario.',
               actionLabel: 'Reintentar',
-              onAction: () => context.read<ScheduleCubit>().loadSchedule(),
+              onAction: () => context.read<ScheduleCubit>().loadSchedule(force: true),
             );
 
           case ScheduleLoaded(:final entries, :final fetchedAt, :final fromCache):

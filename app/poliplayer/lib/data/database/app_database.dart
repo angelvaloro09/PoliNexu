@@ -9,16 +9,24 @@ import 'package:path_provider/path_provider.dart';
 import 'tables/app_flags_table.dart';
 import 'tables/grade_snapshots_table.dart';
 import 'tables/remote_cache_table.dart';
+import 'tables/schedule_overrides_table.dart';
 import 'tables/tasks_table.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [Tasks, GradeSnapshots, RemoteCacheEntries, AppFlags])
+@DriftDatabase(tables: [
+  Tasks,
+  GradeSnapshots,
+  RemoteCacheEntries,
+  AppFlags,
+  SubjectPreferences,
+  ScheduleOverrides,
+])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -27,6 +35,14 @@ class AppDatabase extends _$AppDatabase {
           if (from < 2) await m.createTable(gradeSnapshots);
           if (from < 3) await m.createTable(remoteCacheEntries);
           if (from < 4) await m.createTable(appFlags);
+          if (from < 5) {
+            await m.createTable(subjectPreferences);
+            await m.createTable(scheduleOverrides);
+            await m.addColumn(tasks, tasks.type);
+            await m.addColumn(tasks, tasks.iconKey);
+            await m.addColumn(tasks, tasks.alarmEnabled);
+            await m.addColumn(tasks, tasks.subject);
+          }
         },
       );
 
@@ -59,6 +75,12 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> clearRemoteCache() => delete(remoteCacheEntries).go();
 
+  /// Borra sólo una entrada de caché — usado por `SchoolCycleLifecycleService`
+  /// para limpiar `schedule`/`grades` al cerrar el ciclo sin tocar `kardex`
+  /// (historial acumulado, no dato del ciclo actual).
+  Future<void> clearRemoteCacheKey(String key) =>
+      (delete(remoteCacheEntries)..where((t) => t.cacheKey.equals(key))).go();
+
   Future<String?> readFlag(String key) async {
     final row = await (select(appFlags)..where((t) => t.flagKey.equals(key))).getSingleOrNull();
     return row?.value;
@@ -85,6 +107,36 @@ class AppDatabase extends _$AppDatabase {
         ),
       );
     });
+  }
+
+  Stream<List<SubjectPreference>> watchSubjectPreferences() =>
+      select(subjectPreferences).watch();
+
+  Future<void> setSubjectColor(String subjectKey, int? colorValue) async {
+    await into(subjectPreferences).insertOnConflictUpdate(
+      SubjectPreferencesCompanion.insert(
+        subjectKey: subjectKey,
+        colorValue: Value(colorValue),
+      ),
+    );
+  }
+
+  Stream<List<ScheduleOverride>> watchScheduleOverrides() => select(scheduleOverrides).watch();
+
+  Future<void> setScheduleOverride({
+    required String subjectKey,
+    required String day,
+    String? building,
+    String? classroom,
+  }) async {
+    await into(scheduleOverrides).insertOnConflictUpdate(
+      ScheduleOverridesCompanion.insert(
+        subjectKey: subjectKey,
+        day: day,
+        building: Value(building),
+        classroom: Value(classroom),
+      ),
+    );
   }
 }
 

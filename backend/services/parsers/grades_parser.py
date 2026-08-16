@@ -9,6 +9,8 @@ SAES — no se normalizan aquí, se dejan como texto para que la UI decida.
 
 from bs4 import BeautifulSoup
 
+from .text_normalize import normalize_subject
+
 
 def parse_grades(html: str) -> list[dict]:
     soup = BeautifulSoup(html, "html.parser")
@@ -25,7 +27,7 @@ def parse_grades(html: str) -> list[dict]:
         entries.append(
             {
                 "group": cells[0].get_text(strip=True),
-                "subject": cells[1].get_text(strip=True),
+                "subject": normalize_subject(cells[1].get_text(strip=True)),
                 "partial_1": cells[2].get_text(strip=True),
                 "partial_2": cells[3].get_text(strip=True),
                 "partial_3": cells[4].get_text(strip=True),

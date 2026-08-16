@@ -35,6 +35,21 @@ class CalendarRepositoryImpl implements CalendarRepository {
     }
   }
 
+  @override
+  Future<RemoteData<List<AcademicCalendarEvent>>?> getCachedOnly() async {
+    final cached = await _db.loadRemoteCache(RemoteCacheKeys.academicCalendar);
+    if (cached == null) return null;
+
+    final dtos = (cached.payload as List)
+        .map((e) => AcademicCalendarEventDto.fromJson(e as Map<String, dynamic>))
+        .toList();
+    return RemoteData(
+      value: _toDomain(dtos),
+      fetchedAt: cached.fetchedAt,
+      fromCache: true,
+    );
+  }
+
   List<AcademicCalendarEvent> _toDomain(List<AcademicCalendarEventDto> dtos) => dtos
       .map((e) => AcademicCalendarEvent(
             id: e.id,

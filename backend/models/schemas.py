@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel
@@ -80,6 +80,7 @@ class ScheduleSession(BaseModel):
 
 class ScheduleEntry(BaseModel):
     group: str
+    code: str | None = None
     subject: str
     teachers: str
     sessions: list[ScheduleSession]
@@ -146,3 +147,40 @@ class AcademicCalendarEvent(BaseModel):
 
 class AcademicCalendarResponse(BaseModel):
     events: list[AcademicCalendarEvent]
+
+
+class AcademicStatusSubject(BaseModel):
+    code: str
+    subject: str
+    period: str
+    times: str
+
+
+class AcademicStatusResponse(BaseModel):
+    failed: list[AcademicStatusSubject]
+    not_taken: list[AcademicStatusSubject]
+    out_of_sequence: list[AcademicStatusSubject]
+
+
+class ReinscriptionCreditItem(BaseModel):
+    description: str
+    credits: str
+
+
+class ReinscriptionResponse(BaseModel):
+    average: str
+    failed_subjects_count: str
+    appointment_start: datetime | None = None
+    appointment_end: datetime | None = None
+    total_credits: str
+    max_load: str
+    avg_load: str
+    min_load: str
+    min_periods: str
+    max_periods: str
+    credits_earned: str
+    credits_missing: str
+    periods_taken: str
+    periods_available: str
+    authorized_load: str
+    failed_credits_breakdown: list[ReinscriptionCreditItem]

@@ -16,11 +16,18 @@ class KardexLoaded extends KardexState {
   final Kardex kardex;
   final DateTime fetchedAt;
   final bool fromCache;
+  final bool sessionExpired;
 
-  const KardexLoaded(this.kardex, {required this.fetchedAt, this.fromCache = false});
+  const KardexLoaded(
+    this.kardex, {
+    required this.fetchedAt,
+    this.fromCache = false,
+    this.sessionExpired = false,
+  });
 }
 
 class KardexError extends KardexState {
   final String message;
-  const KardexError(this.message);
+  final bool sessionRequired;
+  const KardexError(this.message, {this.sessionRequired = false});
 }

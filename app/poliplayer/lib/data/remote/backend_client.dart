@@ -98,12 +98,14 @@ extension ScheduleSessionDtoJson on ScheduleSessionDto {
 
 class ScheduleEntryDto {
   final String group;
+  final String? code;
   final String subject;
   final String teachers;
   final List<ScheduleSessionDto> sessions;
 
   ScheduleEntryDto({
     required this.group,
+    this.code,
     required this.subject,
     required this.teachers,
     required this.sessions,
@@ -111,6 +113,7 @@ class ScheduleEntryDto {
 
   factory ScheduleEntryDto.fromJson(Map<String, dynamic> json) => ScheduleEntryDto(
         group: json['group'] as String,
+        code: json['code'] as String?,
         subject: json['subject'] as String,
         teachers: json['teachers'] as String,
         sessions: (json['sessions'] as List)
@@ -122,6 +125,7 @@ class ScheduleEntryDto {
 extension ScheduleEntryDtoJson on ScheduleEntryDto {
   Map<String, dynamic> toJson() => {
         'group': group,
+        'code': code,
         'subject': subject,
         'teachers': teachers,
         'sessions': sessions.map((s) => s.toJson()).toList(),
@@ -292,6 +296,161 @@ extension AcademicCalendarEventDtoJson on AcademicCalendarEventDto {
         'category': category,
         'start_date': startDate,
         'end_date': endDate,
+      };
+}
+
+class AcademicStatusSubjectDto {
+  final String code;
+  final String subject;
+  final String period;
+  final String times;
+
+  AcademicStatusSubjectDto({
+    required this.code,
+    required this.subject,
+    required this.period,
+    required this.times,
+  });
+
+  factory AcademicStatusSubjectDto.fromJson(Map<String, dynamic> json) => AcademicStatusSubjectDto(
+        code: json['code'] as String,
+        subject: json['subject'] as String,
+        period: json['period'] as String,
+        times: json['times'] as String,
+      );
+}
+
+extension AcademicStatusSubjectDtoJson on AcademicStatusSubjectDto {
+  Map<String, dynamic> toJson() => {
+        'code': code,
+        'subject': subject,
+        'period': period,
+        'times': times,
+      };
+}
+
+class AcademicStatusDto {
+  final List<AcademicStatusSubjectDto> failed;
+  final List<AcademicStatusSubjectDto> notTaken;
+  final List<AcademicStatusSubjectDto> outOfSequence;
+
+  AcademicStatusDto({required this.failed, required this.notTaken, required this.outOfSequence});
+
+  factory AcademicStatusDto.fromJson(Map<String, dynamic> json) => AcademicStatusDto(
+        failed: (json['failed'] as List)
+            .map((e) => AcademicStatusSubjectDto.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        notTaken: (json['not_taken'] as List)
+            .map((e) => AcademicStatusSubjectDto.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        outOfSequence: (json['out_of_sequence'] as List)
+            .map((e) => AcademicStatusSubjectDto.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      );
+}
+
+extension AcademicStatusDtoJson on AcademicStatusDto {
+  Map<String, dynamic> toJson() => {
+        'failed': failed.map((e) => e.toJson()).toList(),
+        'not_taken': notTaken.map((e) => e.toJson()).toList(),
+        'out_of_sequence': outOfSequence.map((e) => e.toJson()).toList(),
+      };
+}
+
+class ReinscriptionCreditItemDto {
+  final String description;
+  final String credits;
+
+  ReinscriptionCreditItemDto({required this.description, required this.credits});
+
+  factory ReinscriptionCreditItemDto.fromJson(Map<String, dynamic> json) =>
+      ReinscriptionCreditItemDto(
+        description: json['description'] as String,
+        credits: json['credits'] as String,
+      );
+}
+
+extension ReinscriptionCreditItemDtoJson on ReinscriptionCreditItemDto {
+  Map<String, dynamic> toJson() => {'description': description, 'credits': credits};
+}
+
+class ReinscriptionDto {
+  final String average;
+  final String failedSubjectsCount;
+  final String? appointmentStart;
+  final String? appointmentEnd;
+  final String totalCredits;
+  final String maxLoad;
+  final String avgLoad;
+  final String minLoad;
+  final String minPeriods;
+  final String maxPeriods;
+  final String creditsEarned;
+  final String creditsMissing;
+  final String periodsTaken;
+  final String periodsAvailable;
+  final String authorizedLoad;
+  final List<ReinscriptionCreditItemDto> failedCreditsBreakdown;
+
+  ReinscriptionDto({
+    required this.average,
+    required this.failedSubjectsCount,
+    required this.appointmentStart,
+    required this.appointmentEnd,
+    required this.totalCredits,
+    required this.maxLoad,
+    required this.avgLoad,
+    required this.minLoad,
+    required this.minPeriods,
+    required this.maxPeriods,
+    required this.creditsEarned,
+    required this.creditsMissing,
+    required this.periodsTaken,
+    required this.periodsAvailable,
+    required this.authorizedLoad,
+    required this.failedCreditsBreakdown,
+  });
+
+  factory ReinscriptionDto.fromJson(Map<String, dynamic> json) => ReinscriptionDto(
+        average: json['average'] as String,
+        failedSubjectsCount: json['failed_subjects_count'] as String,
+        appointmentStart: json['appointment_start'] as String?,
+        appointmentEnd: json['appointment_end'] as String?,
+        totalCredits: json['total_credits'] as String,
+        maxLoad: json['max_load'] as String,
+        avgLoad: json['avg_load'] as String,
+        minLoad: json['min_load'] as String,
+        minPeriods: json['min_periods'] as String,
+        maxPeriods: json['max_periods'] as String,
+        creditsEarned: json['credits_earned'] as String,
+        creditsMissing: json['credits_missing'] as String,
+        periodsTaken: json['periods_taken'] as String,
+        periodsAvailable: json['periods_available'] as String,
+        authorizedLoad: json['authorized_load'] as String,
+        failedCreditsBreakdown: (json['failed_credits_breakdown'] as List)
+            .map((e) => ReinscriptionCreditItemDto.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      );
+}
+
+extension ReinscriptionDtoJson on ReinscriptionDto {
+  Map<String, dynamic> toJson() => {
+        'average': average,
+        'failed_subjects_count': failedSubjectsCount,
+        'appointment_start': appointmentStart,
+        'appointment_end': appointmentEnd,
+        'total_credits': totalCredits,
+        'max_load': maxLoad,
+        'avg_load': avgLoad,
+        'min_load': minLoad,
+        'min_periods': minPeriods,
+        'max_periods': maxPeriods,
+        'credits_earned': creditsEarned,
+        'credits_missing': creditsMissing,
+        'periods_taken': periodsTaken,
+        'periods_available': periodsAvailable,
+        'authorized_load': authorizedLoad,
+        'failed_credits_breakdown': failedCreditsBreakdown.map((e) => e.toJson()).toList(),
       };
 }
 
@@ -469,6 +628,30 @@ class BackendClient {
         queryParameters: {'session_token': sessionToken},
       );
       return KardexDto.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _mapError(e);
+    }
+  }
+
+  Future<AcademicStatusDto> getAcademicStatus(String sessionToken) async {
+    try {
+      final response = await _dio.get(
+        '/saes/academic-status',
+        queryParameters: {'session_token': sessionToken},
+      );
+      return AcademicStatusDto.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _mapError(e);
+    }
+  }
+
+  Future<ReinscriptionDto> getReinscription(String sessionToken) async {
+    try {
+      final response = await _dio.get(
+        '/saes/reinscription',
+        queryParameters: {'session_token': sessionToken},
+      );
+      return ReinscriptionDto.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw _mapError(e);
     }

@@ -10,12 +10,17 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/subject_color.dart';
 import '../../../domain/models/grade_entry.dart';
+import '../../../domain/repositories/auth_repository.dart';
 import '../../blocs/grades/grades_cubit.dart';
 import '../../blocs/grades/grades_state.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/skeleton.dart';
 import '../../widgets/stale_data_banner.dart';
 import '../../widgets/status_view.dart';
+
+/// A dónde mandar al usuario a re-loguearse: sólo-CAPTCHA si hay cuenta
+/// guardada, login completo si no.
+String _loginRoute() => getIt<AuthRepository>().currentAccountId != null ? '/reauth' : '/login';
 
 /// Calificación mínima aprobatoria en el IPN.
 const _passingGrade = 6;
@@ -32,8 +37,8 @@ class GradesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<GradesCubit>(
-      create: (_) => getIt<GradesCubit>()..loadGrades(),
+    return BlocProvider<GradesCubit>.value(
+      value: getIt<GradesCubit>()..loadGrades(),
       child: const _GradesView(),
     );
   }
@@ -53,20 +58,28 @@ class _GradesView extends StatelessWidget {
                 padding: EdgeInsets.all(AppSpacing.lg),
                 child: SkeletonList(itemCount: 5),
               ),
+            GradesError(:final message, :final sessionRequired) when sessionRequired =>
+              StatusView.error(
+                title: 'Requiere sesión',
+                icon: Symbols.lock_rounded,
+                actionLabel: 'Iniciar sesión',
+                message: message,
+                onRetry: () => context.go(_loginRoute()),
+              ),
             GradesError(:final message) => StatusView.error(
                 message: message,
-                onRetry: () => context.read<GradesCubit>().loadGrades(),
+                onRetry: () => context.read<GradesCubit>().loadGrades(force: true),
               ),
             GradesLoaded(:final entries) when entries.isEmpty => StatusView.empty(
                 icon: Symbols.grade_rounded,
                 title: 'Todavía no hay calificaciones',
                 message: 'Aparecerán aquí en cuanto tus profesores las capturen.',
                 actionLabel: 'Actualizar',
-                onAction: () => context.read<GradesCubit>().loadGrades(),
+                onAction: () => context.read<GradesCubit>().loadGrades(force: true),
               ),
-            GradesLoaded(:final entries, :final fetchedAt, :final fromCache) =>
+            GradesLoaded(:final entries, :final fetchedAt, :final fromCache, :final sessionExpired) =>
               RefreshIndicator(
-                onRefresh: () => context.read<GradesCubit>().loadGrades(),
+                onRefresh: () => context.read<GradesCubit>().loadGrades(force: true),
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.lg,
@@ -76,7 +89,11 @@ class _GradesView extends StatelessWidget {
                   ),
                   children: [
                     if (fromCache) ...[
-                      StaleDataBanner(fetchedAt: fetchedAt),
+                      StaleDataBanner(
+                        fetchedAt: fetchedAt,
+                        sessionExpired: sessionExpired,
+                        onLoginTap: sessionExpired ? () => context.go(_loginRoute()) : null,
+                      ),
                       const SizedBox(height: AppSpacing.md),
                     ],
                     // Accesos que antes eran dos íconos sin etiqueta en la
@@ -108,17 +125,17 @@ class _ToolsRow extends StatelessWidget {
       children: [
         Expanded(
           child: OutlinedButton.icon(
-            onPressed: () => context.push('/simulator'),
-            icon: const Icon(Symbols.calculate_rounded, size: AppIconSize.sm),
-            label: const Text('Simulador'),
+            onPressed: () => context.push('/kardex'),
+            icon: const Icon(Symbols.school_rounded, size: AppIconSize.sm),
+            label: const Text('Kárdex'),
           ),
         ),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: OutlinedButton.icon(
-            onPressed: () => context.push('/kardex'),
-            icon: const Icon(Symbols.school_rounded, size: AppIconSize.sm),
-            label: const Text('Kárdex'),
+            onPressed: () => context.push('/academic-status'),
+            icon: const Icon(Symbols.fact_check_rounded, size: AppIconSize.sm),
+            label: const Text('Estado'),
           ),
         ),
       ],
@@ -214,7 +231,7 @@ class _GradeCard extends StatelessWidget {
                     Text(entry.subject, style: theme.textTheme.cardTitle),
                     const SizedBox(height: 2),
                     Text(
-                      'Grupo ${entry.group}',
+                      'Grupo: ${entry.group}',
                       style: theme.textTheme.meta?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),

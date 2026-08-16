@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_motion.dart';
+import '../screens/academic_status/academic_status_screen.dart';
 import '../screens/grades/grades_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/kardex/kardex_screen.dart';
@@ -9,7 +10,6 @@ import '../screens/login/login_screen.dart';
 import '../screens/login/reauth_screen.dart';
 import '../screens/onboarding/onboarding_screen.dart';
 import '../screens/schedule/schedule_screen.dart';
-import '../screens/simulator/simulator_screen.dart';
 import '../screens/splash/splash_screen.dart';
 import '../screens/tasks/tasks_screen.dart';
 import '../widgets/main_shell.dart';
@@ -71,8 +71,8 @@ GoRouter buildAppRouter() {
         builder: (context, state) => const KardexScreen(),
       ),
       GoRoute(
-        path: '/simulator',
-        builder: (context, state) => const SimulatorScreen(),
+        path: '/academic-status',
+        builder: (context, state) => const AcademicStatusScreen(),
       ),
       ShellRoute(
         builder: (context, state, child) => MainShell(

@@ -123,9 +123,12 @@ def main() -> None:
         "icon_monochrome.png": dict(
             size=1024, fg=(0, 0, 0, 255), bg=TRANSPARENT, inset=0.52
         ),
-        # Splash nativo, una versión por tema.
-        "splash_light.png": dict(size=512, fg=BRAND_BLUE, bg=TRANSPARENT, inset=0.9),
-        "splash_dark.png": dict(size=512, fg=BRAND_BLUE_DARK, bg=TRANSPARENT, inset=0.9),
+        # Splash nativo, una versión por tema. Android 12+ dibuja este ícono
+        # dentro de una ventana circular que recorta como el ícono adaptativo
+        # (hasta 33% del borde) — mismo inset que `icon_foreground.png`, si no
+        # el trazo queda cortado por el círculo.
+        "splash_light.png": dict(size=512, fg=BRAND_BLUE, bg=TRANSPARENT, inset=0.52),
+        "splash_dark.png": dict(size=512, fg=BRAND_BLUE_DARK, bg=TRANSPARENT, inset=0.52),
     }
 
     for name, kwargs in outputs.items():

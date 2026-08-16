@@ -10,6 +10,8 @@ resolverlo por escuela en vez de asumir que esto es 100% universal.
 SCHEDULE_PATH = "/Alumnos/Informacion_semestral/Horario_Alumno.aspx"
 GRADES_PATH = "/Alumnos/Informacion_semestral/calificaciones_sem.aspx"
 KARDEX_PATH = "/Alumnos/boleta/kardex.aspx"
+ACADEMIC_STATUS_PATH = "/Alumnos/boleta/Estado_Alumno.aspx"
+REINSCRIPTION_PATH = "/Alumnos/Reinscripciones/fichas_reinscripcion.aspx"
 
 # Página que el worker de keep-alive golpea cada pocos minutos para resetear el
 # sliding timeout de la Session de ASP.NET. Debe ser lo más barata posible: no

@@ -18,8 +18,14 @@ class ScheduleLoaded extends ScheduleState {
   /// Cuándo se bajó del SAES. Con [fromCache] `true` puede ser de hace días.
   final DateTime fetchedAt;
   final bool fromCache;
+  final bool sessionExpired;
 
-  const ScheduleLoaded(this.entries, {required this.fetchedAt, this.fromCache = false});
+  const ScheduleLoaded(
+    this.entries, {
+    required this.fetchedAt,
+    this.fromCache = false,
+    this.sessionExpired = false,
+  });
 }
 
 class ScheduleError extends ScheduleState {

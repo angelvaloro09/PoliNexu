@@ -32,3 +32,20 @@ Color subjectColor(String subject, ColorScheme colorScheme) {
   final hash = subject.trim().toLowerCase().hashCode.abs();
   return palette[hash % palette.length];
 }
+
+/// Clave normalizada de materia — mismo criterio que usa el hash de arriba,
+/// compartida con `ScheduleOverridesRepository` para que ambos lados
+/// (auto-color y color guardado por el alumno) hablen de la misma materia.
+String subjectKey(String subject) => subject.trim().toLowerCase();
+
+/// Como [subjectColor], pero si el alumno guardó un color propio para esta
+/// materia (vía `ScheduleOverridesRepository`), ese gana sobre el determinístico.
+Color resolvedSubjectColor(String subject, ColorScheme colorScheme, Map<String, int> overrides) {
+  final override = overrides[subjectKey(subject)];
+  if (override != null) return Color(override);
+  return subjectColor(subject, colorScheme);
+}
+
+/// Swatches elegibles en el selector de color por materia — mismas paletas
+/// que el fallback automático, para que el resultado nunca desentone.
+List<Color> get subjectColorSwatches => [..._accentsLight, ..._accentsDark];

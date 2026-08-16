@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../../../core/di/injection.dart';
@@ -8,6 +9,7 @@ import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../domain/models/kardex.dart';
+import '../../../domain/repositories/auth_repository.dart';
 import '../../blocs/kardex/kardex_cubit.dart';
 import '../../blocs/kardex/kardex_state.dart';
 import '../../widgets/app_card.dart';
@@ -15,6 +17,8 @@ import '../../widgets/skeleton.dart';
 import '../../widgets/stale_data_banner.dart';
 import '../../widgets/status_view.dart';
 import '../grades/grades_screen.dart' show parseGrade;
+
+String _loginRoute() => getIt<AuthRepository>().currentAccountId != null ? '/reauth' : '/login';
 
 /// Calificación mínima aprobatoria en el IPN.
 const _passingGrade = 6;
@@ -24,8 +28,8 @@ class KardexScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<KardexCubit>(
-      create: (_) => getIt<KardexCubit>()..loadKardex(),
+    return BlocProvider<KardexCubit>.value(
+      value: getIt<KardexCubit>()..loadKardex(),
       child: const _KardexView(),
     );
   }
@@ -45,19 +49,28 @@ class _KardexView extends StatelessWidget {
                 padding: EdgeInsets.all(AppSpacing.lg),
                 child: SkeletonList(itemCount: 4),
               ),
+            KardexError(:final message, :final sessionRequired) when sessionRequired =>
+              StatusView.error(
+                title: 'Requiere sesión',
+                icon: Symbols.lock_rounded,
+                actionLabel: 'Iniciar sesión',
+                message: message,
+                onRetry: () => context.go(_loginRoute()),
+              ),
             KardexError(:final message) => StatusView.error(
                 message: message,
-                onRetry: () => context.read<KardexCubit>().loadKardex(),
+                onRetry: () => context.read<KardexCubit>().loadKardex(force: true),
               ),
             KardexLoaded(:final kardex) when kardex.semesters.isEmpty => StatusView.empty(
                 icon: Symbols.history_edu_rounded,
                 title: 'Kárdex vacío',
                 message: 'El SAES no devolvió materias cursadas.',
                 actionLabel: 'Actualizar',
-                onAction: () => context.read<KardexCubit>().loadKardex(),
+                onAction: () => context.read<KardexCubit>().loadKardex(force: true),
               ),
-            KardexLoaded(:final kardex, :final fetchedAt, :final fromCache) => RefreshIndicator(
-                onRefresh: () => context.read<KardexCubit>().loadKardex(),
+            KardexLoaded(:final kardex, :final fetchedAt, :final fromCache, :final sessionExpired) =>
+              RefreshIndicator(
+                onRefresh: () => context.read<KardexCubit>().loadKardex(force: true),
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.lg,
@@ -67,7 +80,11 @@ class _KardexView extends StatelessWidget {
                   ),
                   children: [
                     if (fromCache) ...[
-                      StaleDataBanner(fetchedAt: fetchedAt),
+                      StaleDataBanner(
+                        fetchedAt: fetchedAt,
+                        sessionExpired: sessionExpired,
+                        onLoginTap: sessionExpired ? () => context.go(_loginRoute()) : null,
+                      ),
                       const SizedBox(height: AppSpacing.md),
                     ],
                     _SummaryCard(kardex: kardex),

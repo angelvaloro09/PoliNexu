@@ -25,6 +25,14 @@ const _calendarChannelId = 'academic_calendar_channel';
 const _calendarChannelName = 'Calendario académico IPN';
 const _calendarChannelDescription = 'Avisos de fechas del calendario institucional del IPN';
 
+const _sessionChannelId = 'session_channel';
+const _sessionChannelName = 'Sesión del SAES';
+const _sessionChannelDescription = 'Avisos cuando el SAES cierra la sesión';
+
+const _reinscriptionChannelId = 'reinscription_channel';
+const _reinscriptionChannelName = 'Reinscripción';
+const _reinscriptionChannelDescription = 'Aviso antes de la cita de reinscripción';
+
 /// Minutos de anticipación con los que suena la alarma antes de cada clase.
 const _classAlarmLeadMinutes = 10;
 
@@ -39,6 +47,10 @@ const _classAlarmLeadMinutes = 10;
 class NotificationServiceImpl implements NotificationService {
   final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
   bool _initialized = false;
+
+  /// Evita repetir el aviso de sesión muerta en cada fetch fallido — se
+  /// resetea desde `AuthCubit` cuando la sesión vuelve a ser válida.
+  bool _sessionExpiredNotified = false;
 
   AndroidFlutterLocalNotificationsPlugin? get _android =>
       _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
@@ -85,6 +97,18 @@ class NotificationServiceImpl implements NotificationService {
         _calendarChannelName,
         description: _calendarChannelDescription,
       ));
+      await android.createNotificationChannel(const AndroidNotificationChannel(
+        _sessionChannelId,
+        _sessionChannelName,
+        description: _sessionChannelDescription,
+        importance: Importance.high,
+      ));
+      await android.createNotificationChannel(const AndroidNotificationChannel(
+        _reinscriptionChannelId,
+        _reinscriptionChannelName,
+        description: _reinscriptionChannelDescription,
+        importance: Importance.high,
+      ));
     }
 
     _initialized = true;
@@ -103,7 +127,7 @@ class NotificationServiceImpl implements NotificationService {
     await _plugin.cancel(id: id);
 
     final dueDate = task.dueDate;
-    if (dueDate == null || task.isCompleted) return;
+    if (dueDate == null || task.isCompleted || !task.alarmEnabled) return;
 
     // 9:00 a.m. del día de la fecha límite.
     final scheduled = tz.TZDateTime(tz.local, dueDate.year, dueDate.month, dueDate.day, 9);
@@ -237,6 +261,58 @@ class NotificationServiceImpl implements NotificationService {
     }
   }
 
+  @override
+  Future<void> notifySessionExpired() async {
+    if (_sessionExpiredNotified) return;
+    _sessionExpiredNotified = true;
+
+    await _plugin.show(
+      id: _sessionExpiredId,
+      title: 'Sesión del SAES cerrada',
+      body: 'Inicia sesión de nuevo para actualizar Notas y Kárdex.',
+      notificationDetails: const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _sessionChannelId,
+          _sessionChannelName,
+          channelDescription: _sessionChannelDescription,
+          icon: '@mipmap/ic_launcher',
+          priority: Priority.high,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Future<void> clearSessionExpiredNotice() async {
+    _sessionExpiredNotified = false;
+  }
+
+  @override
+  Future<void> scheduleReinscriptionReminder(DateTime citaInicio) async {
+    await _plugin.cancel(id: _reinscriptionReminderId);
+
+    final scheduled =
+        tz.TZDateTime.from(citaInicio, tz.local).subtract(const Duration(minutes: 30));
+    if (scheduled.isBefore(tz.TZDateTime.now(tz.local))) return;
+
+    await _plugin.zonedSchedule(
+      id: _reinscriptionReminderId,
+      title: 'Cita de reinscripción en 30 minutos',
+      body: 'No la dejes pasar.',
+      scheduledDate: scheduled,
+      notificationDetails: const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _reinscriptionChannelId,
+          _reinscriptionChannelName,
+          channelDescription: _reinscriptionChannelDescription,
+          icon: '@mipmap/ic_launcher',
+          priority: Priority.high,
+        ),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+    );
+  }
+
   static const _taskIdBase = 1000;
   static const _classAlarmIdBase = 2000;
   static const _classAlarmIdRange = 1000;
@@ -244,6 +320,8 @@ class NotificationServiceImpl implements NotificationService {
   static const _gradeIdRange = 1000;
   static const _calendarIdBase = 4000;
   static const _calendarIdRange = 1000;
+  static const _sessionExpiredId = 5000;
+  static const _reinscriptionReminderId = 6000;
 
   int _calendarNotificationId(String eventId) =>
       _calendarIdBase + (eventId.hashCode.abs() % _calendarIdRange);

@@ -13,13 +13,20 @@ class RemoteData<T> {
   /// `true` si viene de la caché local porque la red o la sesión fallaron.
   final bool fromCache;
 
+  /// `true` si específicamente la sesión del SAES expiró (vs. cualquier otro
+  /// fallo de red) — la UI usa esto para ofrecer re-login en vez de un
+  /// "reintentar" genérico.
+  final bool sessionExpired;
+
   const RemoteData({
     required this.value,
     required this.fetchedAt,
     required this.fromCache,
+    this.sessionExpired = false,
   });
 
   RemoteData.fresh(this.value)
       : fetchedAt = DateTime.now(),
-        fromCache = false;
+        fromCache = false,
+        sessionExpired = false;
 }

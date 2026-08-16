@@ -20,6 +20,10 @@ class TaskRepositoryImpl implements TaskRepository {
       description: Value(task.description),
       dueDate: Value(task.dueDate),
       priority: Value(task.priority.index),
+      type: Value(task.type.index),
+      iconKey: Value(task.iconKey),
+      alarmEnabled: Value(task.alarmEnabled),
+      subject: Value(task.subject),
     ));
     return TaskItem(
       id: id,
@@ -29,6 +33,10 @@ class TaskRepositoryImpl implements TaskRepository {
       isCompleted: task.isCompleted,
       priority: task.priority,
       createdAt: task.createdAt,
+      type: task.type,
+      iconKey: task.iconKey,
+      alarmEnabled: task.alarmEnabled,
+      subject: task.subject,
     );
   }
 
@@ -42,6 +50,10 @@ class TaskRepositoryImpl implements TaskRepository {
       isCompleted: task.isCompleted,
       priority: task.priority.index,
       createdAt: task.createdAt,
+      type: task.type.index,
+      iconKey: task.iconKey,
+      alarmEnabled: task.alarmEnabled,
+      subject: task.subject,
     ));
   }
 
@@ -56,5 +68,9 @@ class TaskRepositoryImpl implements TaskRepository {
         isCompleted: row.isCompleted,
         priority: TaskPriority.fromValue(row.priority),
         createdAt: row.createdAt,
+        type: TaskType.fromValue(row.type),
+        iconKey: row.iconKey,
+        alarmEnabled: row.alarmEnabled,
+        subject: row.subject,
       );
 }

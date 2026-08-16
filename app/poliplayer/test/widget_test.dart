@@ -18,6 +18,7 @@ import 'package:poliplayer/domain/models/task_item.dart';
 import 'package:poliplayer/domain/repositories/app_preferences.dart';
 import 'package:poliplayer/domain/repositories/auth_repository.dart';
 import 'package:poliplayer/domain/repositories/calendar_repository.dart';
+import 'package:poliplayer/domain/repositories/schedule_overrides_repository.dart';
 import 'package:poliplayer/domain/repositories/grades_repository.dart';
 import 'package:poliplayer/domain/repositories/kardex_repository.dart';
 import 'package:poliplayer/domain/repositories/notification_service.dart';
@@ -127,18 +128,44 @@ class _FakeScheduleRepository implements ScheduleRepository {
   @override
   Future<RemoteData<List<ScheduleEntry>>> getSchedule() async =>
       RemoteData.fresh(const <ScheduleEntry>[]);
+
+  @override
+  Future<RemoteData<List<ScheduleEntry>>?> getCachedOnly() async => null;
 }
 
 class _FakeCalendarRepository implements CalendarRepository {
   @override
   Future<RemoteData<List<AcademicCalendarEvent>>> getAcademicCalendar() async =>
       RemoteData.fresh(const <AcademicCalendarEvent>[]);
+
+  @override
+  Future<RemoteData<List<AcademicCalendarEvent>>?> getCachedOnly() async => null;
+}
+
+class _FakeScheduleOverridesRepository implements ScheduleOverridesRepository {
+  @override
+  Stream<ScheduleOverridesSnapshot> watchOverrides() =>
+      Stream.value(const ScheduleOverridesSnapshot());
+
+  @override
+  Future<void> setSubjectColor(String subject, int? colorValue) async {}
+
+  @override
+  Future<void> setSessionOverride({
+    required String subject,
+    required String day,
+    String? building,
+    String? classroom,
+  }) async {}
 }
 
 class _FakeGradesRepository implements GradesRepository {
   @override
   Future<RemoteData<List<GradeEntry>>> getGrades() async =>
       RemoteData.fresh(const <GradeEntry>[]);
+
+  @override
+  Future<RemoteData<List<GradeEntry>>?> getCachedOnly() async => null;
 
   @override
   Future<Map<String, String>> loadCachedGrades() async => const {};
@@ -152,6 +179,9 @@ class _FakeKardexRepository implements KardexRepository {
   Future<RemoteData<Kardex>> getKardex() async => RemoteData.fresh(
         const Kardex(career: '', studyPlan: '', average: '', semesters: []),
       );
+
+  @override
+  Future<RemoteData<Kardex>?> getCachedOnly() async => null;
 }
 
 /// Servicio falso: evita invocar el plugin nativo de notificaciones (sin
@@ -211,7 +241,10 @@ void main() {
     getIt.registerLazySingleton<TaskRepository>(() => _FakeTaskRepository());
     getIt.unregister<ScheduleRepository>();
     getIt.registerLazySingleton<ScheduleRepository>(() => _FakeScheduleRepository());
+    getIt.unregister<CalendarRepository>();
     getIt.registerLazySingleton<CalendarRepository>(() => _FakeCalendarRepository());
+    getIt.unregister<ScheduleOverridesRepository>();
+    getIt.registerLazySingleton<ScheduleOverridesRepository>(() => _FakeScheduleOverridesRepository());
     getIt.unregister<GradesRepository>();
     getIt.registerLazySingleton<GradesRepository>(() => _FakeGradesRepository());
     getIt.unregister<KardexRepository>();

@@ -95,6 +95,53 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  @override
+  late final GeneratedColumn<int> type = GeneratedColumn<int>(
+    'type',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _iconKeyMeta = const VerificationMeta(
+    'iconKey',
+  );
+  @override
+  late final GeneratedColumn<String> iconKey = GeneratedColumn<String>(
+    'icon_key',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _alarmEnabledMeta = const VerificationMeta(
+    'alarmEnabled',
+  );
+  @override
+  late final GeneratedColumn<bool> alarmEnabled = GeneratedColumn<bool>(
+    'alarm_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("alarm_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _subjectMeta = const VerificationMeta(
+    'subject',
+  );
+  @override
+  late final GeneratedColumn<String> subject = GeneratedColumn<String>(
+    'subject',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -104,6 +151,10 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
     isCompleted,
     priority,
     createdAt,
+    type,
+    iconKey,
+    alarmEnabled,
+    subject,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -164,6 +215,33 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
         createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
       );
     }
+    if (data.containsKey('type')) {
+      context.handle(
+        _typeMeta,
+        type.isAcceptableOrUnknown(data['type']!, _typeMeta),
+      );
+    }
+    if (data.containsKey('icon_key')) {
+      context.handle(
+        _iconKeyMeta,
+        iconKey.isAcceptableOrUnknown(data['icon_key']!, _iconKeyMeta),
+      );
+    }
+    if (data.containsKey('alarm_enabled')) {
+      context.handle(
+        _alarmEnabledMeta,
+        alarmEnabled.isAcceptableOrUnknown(
+          data['alarm_enabled']!,
+          _alarmEnabledMeta,
+        ),
+      );
+    }
+    if (data.containsKey('subject')) {
+      context.handle(
+        _subjectMeta,
+        subject.isAcceptableOrUnknown(data['subject']!, _subjectMeta),
+      );
+    }
     return context;
   }
 
@@ -201,6 +279,22 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
       )!,
+      type: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}type'],
+      )!,
+      iconKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}icon_key'],
+      ),
+      alarmEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}alarm_enabled'],
+      )!,
+      subject: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}subject'],
+      ),
     );
   }
 
@@ -218,6 +312,10 @@ class Task extends DataClass implements Insertable<Task> {
   final bool isCompleted;
   final int priority;
   final DateTime createdAt;
+  final int type;
+  final String? iconKey;
+  final bool alarmEnabled;
+  final String? subject;
   const Task({
     required this.id,
     required this.title,
@@ -226,6 +324,10 @@ class Task extends DataClass implements Insertable<Task> {
     required this.isCompleted,
     required this.priority,
     required this.createdAt,
+    required this.type,
+    this.iconKey,
+    required this.alarmEnabled,
+    this.subject,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -241,6 +343,14 @@ class Task extends DataClass implements Insertable<Task> {
     map['is_completed'] = Variable<bool>(isCompleted);
     map['priority'] = Variable<int>(priority);
     map['created_at'] = Variable<DateTime>(createdAt);
+    map['type'] = Variable<int>(type);
+    if (!nullToAbsent || iconKey != null) {
+      map['icon_key'] = Variable<String>(iconKey);
+    }
+    map['alarm_enabled'] = Variable<bool>(alarmEnabled);
+    if (!nullToAbsent || subject != null) {
+      map['subject'] = Variable<String>(subject);
+    }
     return map;
   }
 
@@ -257,6 +367,14 @@ class Task extends DataClass implements Insertable<Task> {
       isCompleted: Value(isCompleted),
       priority: Value(priority),
       createdAt: Value(createdAt),
+      type: Value(type),
+      iconKey: iconKey == null && nullToAbsent
+          ? const Value.absent()
+          : Value(iconKey),
+      alarmEnabled: Value(alarmEnabled),
+      subject: subject == null && nullToAbsent
+          ? const Value.absent()
+          : Value(subject),
     );
   }
 
@@ -273,6 +391,10 @@ class Task extends DataClass implements Insertable<Task> {
       isCompleted: serializer.fromJson<bool>(json['isCompleted']),
       priority: serializer.fromJson<int>(json['priority']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      type: serializer.fromJson<int>(json['type']),
+      iconKey: serializer.fromJson<String?>(json['iconKey']),
+      alarmEnabled: serializer.fromJson<bool>(json['alarmEnabled']),
+      subject: serializer.fromJson<String?>(json['subject']),
     );
   }
   @override
@@ -286,6 +408,10 @@ class Task extends DataClass implements Insertable<Task> {
       'isCompleted': serializer.toJson<bool>(isCompleted),
       'priority': serializer.toJson<int>(priority),
       'createdAt': serializer.toJson<DateTime>(createdAt),
+      'type': serializer.toJson<int>(type),
+      'iconKey': serializer.toJson<String?>(iconKey),
+      'alarmEnabled': serializer.toJson<bool>(alarmEnabled),
+      'subject': serializer.toJson<String?>(subject),
     };
   }
 
@@ -297,6 +423,10 @@ class Task extends DataClass implements Insertable<Task> {
     bool? isCompleted,
     int? priority,
     DateTime? createdAt,
+    int? type,
+    Value<String?> iconKey = const Value.absent(),
+    bool? alarmEnabled,
+    Value<String?> subject = const Value.absent(),
   }) => Task(
     id: id ?? this.id,
     title: title ?? this.title,
@@ -305,6 +435,10 @@ class Task extends DataClass implements Insertable<Task> {
     isCompleted: isCompleted ?? this.isCompleted,
     priority: priority ?? this.priority,
     createdAt: createdAt ?? this.createdAt,
+    type: type ?? this.type,
+    iconKey: iconKey.present ? iconKey.value : this.iconKey,
+    alarmEnabled: alarmEnabled ?? this.alarmEnabled,
+    subject: subject.present ? subject.value : this.subject,
   );
   Task copyWithCompanion(TasksCompanion data) {
     return Task(
@@ -319,6 +453,12 @@ class Task extends DataClass implements Insertable<Task> {
           : this.isCompleted,
       priority: data.priority.present ? data.priority.value : this.priority,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      type: data.type.present ? data.type.value : this.type,
+      iconKey: data.iconKey.present ? data.iconKey.value : this.iconKey,
+      alarmEnabled: data.alarmEnabled.present
+          ? data.alarmEnabled.value
+          : this.alarmEnabled,
+      subject: data.subject.present ? data.subject.value : this.subject,
     );
   }
 
@@ -331,7 +471,11 @@ class Task extends DataClass implements Insertable<Task> {
           ..write('dueDate: $dueDate, ')
           ..write('isCompleted: $isCompleted, ')
           ..write('priority: $priority, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('type: $type, ')
+          ..write('iconKey: $iconKey, ')
+          ..write('alarmEnabled: $alarmEnabled, ')
+          ..write('subject: $subject')
           ..write(')'))
         .toString();
   }
@@ -345,6 +489,10 @@ class Task extends DataClass implements Insertable<Task> {
     isCompleted,
     priority,
     createdAt,
+    type,
+    iconKey,
+    alarmEnabled,
+    subject,
   );
   @override
   bool operator ==(Object other) =>
@@ -356,7 +504,11 @@ class Task extends DataClass implements Insertable<Task> {
           other.dueDate == this.dueDate &&
           other.isCompleted == this.isCompleted &&
           other.priority == this.priority &&
-          other.createdAt == this.createdAt);
+          other.createdAt == this.createdAt &&
+          other.type == this.type &&
+          other.iconKey == this.iconKey &&
+          other.alarmEnabled == this.alarmEnabled &&
+          other.subject == this.subject);
 }
 
 class TasksCompanion extends UpdateCompanion<Task> {
@@ -367,6 +519,10 @@ class TasksCompanion extends UpdateCompanion<Task> {
   final Value<bool> isCompleted;
   final Value<int> priority;
   final Value<DateTime> createdAt;
+  final Value<int> type;
+  final Value<String?> iconKey;
+  final Value<bool> alarmEnabled;
+  final Value<String?> subject;
   const TasksCompanion({
     this.id = const Value.absent(),
     this.title = const Value.absent(),
@@ -375,6 +531,10 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.isCompleted = const Value.absent(),
     this.priority = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.type = const Value.absent(),
+    this.iconKey = const Value.absent(),
+    this.alarmEnabled = const Value.absent(),
+    this.subject = const Value.absent(),
   });
   TasksCompanion.insert({
     this.id = const Value.absent(),
@@ -384,6 +544,10 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.isCompleted = const Value.absent(),
     this.priority = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.type = const Value.absent(),
+    this.iconKey = const Value.absent(),
+    this.alarmEnabled = const Value.absent(),
+    this.subject = const Value.absent(),
   }) : title = Value(title);
   static Insertable<Task> custom({
     Expression<int>? id,
@@ -393,6 +557,10 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Expression<bool>? isCompleted,
     Expression<int>? priority,
     Expression<DateTime>? createdAt,
+    Expression<int>? type,
+    Expression<String>? iconKey,
+    Expression<bool>? alarmEnabled,
+    Expression<String>? subject,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -402,6 +570,10 @@ class TasksCompanion extends UpdateCompanion<Task> {
       if (isCompleted != null) 'is_completed': isCompleted,
       if (priority != null) 'priority': priority,
       if (createdAt != null) 'created_at': createdAt,
+      if (type != null) 'type': type,
+      if (iconKey != null) 'icon_key': iconKey,
+      if (alarmEnabled != null) 'alarm_enabled': alarmEnabled,
+      if (subject != null) 'subject': subject,
     });
   }
 
@@ -413,6 +585,10 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Value<bool>? isCompleted,
     Value<int>? priority,
     Value<DateTime>? createdAt,
+    Value<int>? type,
+    Value<String?>? iconKey,
+    Value<bool>? alarmEnabled,
+    Value<String?>? subject,
   }) {
     return TasksCompanion(
       id: id ?? this.id,
@@ -422,6 +598,10 @@ class TasksCompanion extends UpdateCompanion<Task> {
       isCompleted: isCompleted ?? this.isCompleted,
       priority: priority ?? this.priority,
       createdAt: createdAt ?? this.createdAt,
+      type: type ?? this.type,
+      iconKey: iconKey ?? this.iconKey,
+      alarmEnabled: alarmEnabled ?? this.alarmEnabled,
+      subject: subject ?? this.subject,
     );
   }
 
@@ -449,6 +629,18 @@ class TasksCompanion extends UpdateCompanion<Task> {
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
+    if (type.present) {
+      map['type'] = Variable<int>(type.value);
+    }
+    if (iconKey.present) {
+      map['icon_key'] = Variable<String>(iconKey.value);
+    }
+    if (alarmEnabled.present) {
+      map['alarm_enabled'] = Variable<bool>(alarmEnabled.value);
+    }
+    if (subject.present) {
+      map['subject'] = Variable<String>(subject.value);
+    }
     return map;
   }
 
@@ -461,7 +653,11 @@ class TasksCompanion extends UpdateCompanion<Task> {
           ..write('dueDate: $dueDate, ')
           ..write('isCompleted: $isCompleted, ')
           ..write('priority: $priority, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('type: $type, ')
+          ..write('iconKey: $iconKey, ')
+          ..write('alarmEnabled: $alarmEnabled, ')
+          ..write('subject: $subject')
           ..write(')'))
         .toString();
   }
@@ -1173,6 +1369,550 @@ class AppFlagsCompanion extends UpdateCompanion<AppFlag> {
   }
 }
 
+class $SubjectPreferencesTable extends SubjectPreferences
+    with TableInfo<$SubjectPreferencesTable, SubjectPreference> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SubjectPreferencesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _subjectKeyMeta = const VerificationMeta(
+    'subjectKey',
+  );
+  @override
+  late final GeneratedColumn<String> subjectKey = GeneratedColumn<String>(
+    'subject_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _colorValueMeta = const VerificationMeta(
+    'colorValue',
+  );
+  @override
+  late final GeneratedColumn<int> colorValue = GeneratedColumn<int>(
+    'color_value',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [subjectKey, colorValue];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'subject_preferences';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SubjectPreference> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('subject_key')) {
+      context.handle(
+        _subjectKeyMeta,
+        subjectKey.isAcceptableOrUnknown(data['subject_key']!, _subjectKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_subjectKeyMeta);
+    }
+    if (data.containsKey('color_value')) {
+      context.handle(
+        _colorValueMeta,
+        colorValue.isAcceptableOrUnknown(data['color_value']!, _colorValueMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {subjectKey};
+  @override
+  SubjectPreference map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SubjectPreference(
+      subjectKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}subject_key'],
+      )!,
+      colorValue: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}color_value'],
+      ),
+    );
+  }
+
+  @override
+  $SubjectPreferencesTable createAlias(String alias) {
+    return $SubjectPreferencesTable(attachedDatabase, alias);
+  }
+}
+
+class SubjectPreference extends DataClass
+    implements Insertable<SubjectPreference> {
+  final String subjectKey;
+  final int? colorValue;
+  const SubjectPreference({required this.subjectKey, this.colorValue});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['subject_key'] = Variable<String>(subjectKey);
+    if (!nullToAbsent || colorValue != null) {
+      map['color_value'] = Variable<int>(colorValue);
+    }
+    return map;
+  }
+
+  SubjectPreferencesCompanion toCompanion(bool nullToAbsent) {
+    return SubjectPreferencesCompanion(
+      subjectKey: Value(subjectKey),
+      colorValue: colorValue == null && nullToAbsent
+          ? const Value.absent()
+          : Value(colorValue),
+    );
+  }
+
+  factory SubjectPreference.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SubjectPreference(
+      subjectKey: serializer.fromJson<String>(json['subjectKey']),
+      colorValue: serializer.fromJson<int?>(json['colorValue']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'subjectKey': serializer.toJson<String>(subjectKey),
+      'colorValue': serializer.toJson<int?>(colorValue),
+    };
+  }
+
+  SubjectPreference copyWith({
+    String? subjectKey,
+    Value<int?> colorValue = const Value.absent(),
+  }) => SubjectPreference(
+    subjectKey: subjectKey ?? this.subjectKey,
+    colorValue: colorValue.present ? colorValue.value : this.colorValue,
+  );
+  SubjectPreference copyWithCompanion(SubjectPreferencesCompanion data) {
+    return SubjectPreference(
+      subjectKey: data.subjectKey.present
+          ? data.subjectKey.value
+          : this.subjectKey,
+      colorValue: data.colorValue.present
+          ? data.colorValue.value
+          : this.colorValue,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SubjectPreference(')
+          ..write('subjectKey: $subjectKey, ')
+          ..write('colorValue: $colorValue')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(subjectKey, colorValue);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SubjectPreference &&
+          other.subjectKey == this.subjectKey &&
+          other.colorValue == this.colorValue);
+}
+
+class SubjectPreferencesCompanion extends UpdateCompanion<SubjectPreference> {
+  final Value<String> subjectKey;
+  final Value<int?> colorValue;
+  final Value<int> rowid;
+  const SubjectPreferencesCompanion({
+    this.subjectKey = const Value.absent(),
+    this.colorValue = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SubjectPreferencesCompanion.insert({
+    required String subjectKey,
+    this.colorValue = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : subjectKey = Value(subjectKey);
+  static Insertable<SubjectPreference> custom({
+    Expression<String>? subjectKey,
+    Expression<int>? colorValue,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (subjectKey != null) 'subject_key': subjectKey,
+      if (colorValue != null) 'color_value': colorValue,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SubjectPreferencesCompanion copyWith({
+    Value<String>? subjectKey,
+    Value<int?>? colorValue,
+    Value<int>? rowid,
+  }) {
+    return SubjectPreferencesCompanion(
+      subjectKey: subjectKey ?? this.subjectKey,
+      colorValue: colorValue ?? this.colorValue,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (subjectKey.present) {
+      map['subject_key'] = Variable<String>(subjectKey.value);
+    }
+    if (colorValue.present) {
+      map['color_value'] = Variable<int>(colorValue.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SubjectPreferencesCompanion(')
+          ..write('subjectKey: $subjectKey, ')
+          ..write('colorValue: $colorValue, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ScheduleOverridesTable extends ScheduleOverrides
+    with TableInfo<$ScheduleOverridesTable, ScheduleOverride> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ScheduleOverridesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _subjectKeyMeta = const VerificationMeta(
+    'subjectKey',
+  );
+  @override
+  late final GeneratedColumn<String> subjectKey = GeneratedColumn<String>(
+    'subject_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _dayMeta = const VerificationMeta('day');
+  @override
+  late final GeneratedColumn<String> day = GeneratedColumn<String>(
+    'day',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _buildingMeta = const VerificationMeta(
+    'building',
+  );
+  @override
+  late final GeneratedColumn<String> building = GeneratedColumn<String>(
+    'building',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _classroomMeta = const VerificationMeta(
+    'classroom',
+  );
+  @override
+  late final GeneratedColumn<String> classroom = GeneratedColumn<String>(
+    'classroom',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [subjectKey, day, building, classroom];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'schedule_overrides';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ScheduleOverride> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('subject_key')) {
+      context.handle(
+        _subjectKeyMeta,
+        subjectKey.isAcceptableOrUnknown(data['subject_key']!, _subjectKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_subjectKeyMeta);
+    }
+    if (data.containsKey('day')) {
+      context.handle(
+        _dayMeta,
+        day.isAcceptableOrUnknown(data['day']!, _dayMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dayMeta);
+    }
+    if (data.containsKey('building')) {
+      context.handle(
+        _buildingMeta,
+        building.isAcceptableOrUnknown(data['building']!, _buildingMeta),
+      );
+    }
+    if (data.containsKey('classroom')) {
+      context.handle(
+        _classroomMeta,
+        classroom.isAcceptableOrUnknown(data['classroom']!, _classroomMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {subjectKey, day};
+  @override
+  ScheduleOverride map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ScheduleOverride(
+      subjectKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}subject_key'],
+      )!,
+      day: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}day'],
+      )!,
+      building: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}building'],
+      ),
+      classroom: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}classroom'],
+      ),
+    );
+  }
+
+  @override
+  $ScheduleOverridesTable createAlias(String alias) {
+    return $ScheduleOverridesTable(attachedDatabase, alias);
+  }
+}
+
+class ScheduleOverride extends DataClass
+    implements Insertable<ScheduleOverride> {
+  final String subjectKey;
+  final String day;
+  final String? building;
+  final String? classroom;
+  const ScheduleOverride({
+    required this.subjectKey,
+    required this.day,
+    this.building,
+    this.classroom,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['subject_key'] = Variable<String>(subjectKey);
+    map['day'] = Variable<String>(day);
+    if (!nullToAbsent || building != null) {
+      map['building'] = Variable<String>(building);
+    }
+    if (!nullToAbsent || classroom != null) {
+      map['classroom'] = Variable<String>(classroom);
+    }
+    return map;
+  }
+
+  ScheduleOverridesCompanion toCompanion(bool nullToAbsent) {
+    return ScheduleOverridesCompanion(
+      subjectKey: Value(subjectKey),
+      day: Value(day),
+      building: building == null && nullToAbsent
+          ? const Value.absent()
+          : Value(building),
+      classroom: classroom == null && nullToAbsent
+          ? const Value.absent()
+          : Value(classroom),
+    );
+  }
+
+  factory ScheduleOverride.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ScheduleOverride(
+      subjectKey: serializer.fromJson<String>(json['subjectKey']),
+      day: serializer.fromJson<String>(json['day']),
+      building: serializer.fromJson<String?>(json['building']),
+      classroom: serializer.fromJson<String?>(json['classroom']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'subjectKey': serializer.toJson<String>(subjectKey),
+      'day': serializer.toJson<String>(day),
+      'building': serializer.toJson<String?>(building),
+      'classroom': serializer.toJson<String?>(classroom),
+    };
+  }
+
+  ScheduleOverride copyWith({
+    String? subjectKey,
+    String? day,
+    Value<String?> building = const Value.absent(),
+    Value<String?> classroom = const Value.absent(),
+  }) => ScheduleOverride(
+    subjectKey: subjectKey ?? this.subjectKey,
+    day: day ?? this.day,
+    building: building.present ? building.value : this.building,
+    classroom: classroom.present ? classroom.value : this.classroom,
+  );
+  ScheduleOverride copyWithCompanion(ScheduleOverridesCompanion data) {
+    return ScheduleOverride(
+      subjectKey: data.subjectKey.present
+          ? data.subjectKey.value
+          : this.subjectKey,
+      day: data.day.present ? data.day.value : this.day,
+      building: data.building.present ? data.building.value : this.building,
+      classroom: data.classroom.present ? data.classroom.value : this.classroom,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ScheduleOverride(')
+          ..write('subjectKey: $subjectKey, ')
+          ..write('day: $day, ')
+          ..write('building: $building, ')
+          ..write('classroom: $classroom')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(subjectKey, day, building, classroom);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ScheduleOverride &&
+          other.subjectKey == this.subjectKey &&
+          other.day == this.day &&
+          other.building == this.building &&
+          other.classroom == this.classroom);
+}
+
+class ScheduleOverridesCompanion extends UpdateCompanion<ScheduleOverride> {
+  final Value<String> subjectKey;
+  final Value<String> day;
+  final Value<String?> building;
+  final Value<String?> classroom;
+  final Value<int> rowid;
+  const ScheduleOverridesCompanion({
+    this.subjectKey = const Value.absent(),
+    this.day = const Value.absent(),
+    this.building = const Value.absent(),
+    this.classroom = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ScheduleOverridesCompanion.insert({
+    required String subjectKey,
+    required String day,
+    this.building = const Value.absent(),
+    this.classroom = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : subjectKey = Value(subjectKey),
+       day = Value(day);
+  static Insertable<ScheduleOverride> custom({
+    Expression<String>? subjectKey,
+    Expression<String>? day,
+    Expression<String>? building,
+    Expression<String>? classroom,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (subjectKey != null) 'subject_key': subjectKey,
+      if (day != null) 'day': day,
+      if (building != null) 'building': building,
+      if (classroom != null) 'classroom': classroom,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ScheduleOverridesCompanion copyWith({
+    Value<String>? subjectKey,
+    Value<String>? day,
+    Value<String?>? building,
+    Value<String?>? classroom,
+    Value<int>? rowid,
+  }) {
+    return ScheduleOverridesCompanion(
+      subjectKey: subjectKey ?? this.subjectKey,
+      day: day ?? this.day,
+      building: building ?? this.building,
+      classroom: classroom ?? this.classroom,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (subjectKey.present) {
+      map['subject_key'] = Variable<String>(subjectKey.value);
+    }
+    if (day.present) {
+      map['day'] = Variable<String>(day.value);
+    }
+    if (building.present) {
+      map['building'] = Variable<String>(building.value);
+    }
+    if (classroom.present) {
+      map['classroom'] = Variable<String>(classroom.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ScheduleOverridesCompanion(')
+          ..write('subjectKey: $subjectKey, ')
+          ..write('day: $day, ')
+          ..write('building: $building, ')
+          ..write('classroom: $classroom, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -1181,6 +1921,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $RemoteCacheEntriesTable remoteCacheEntries =
       $RemoteCacheEntriesTable(this);
   late final $AppFlagsTable appFlags = $AppFlagsTable(this);
+  late final $SubjectPreferencesTable subjectPreferences =
+      $SubjectPreferencesTable(this);
+  late final $ScheduleOverridesTable scheduleOverrides =
+      $ScheduleOverridesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1190,6 +1934,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     gradeSnapshots,
     remoteCacheEntries,
     appFlags,
+    subjectPreferences,
+    scheduleOverrides,
   ];
 }
 
@@ -1202,6 +1948,10 @@ typedef $$TasksTableCreateCompanionBuilder =
       Value<bool> isCompleted,
       Value<int> priority,
       Value<DateTime> createdAt,
+      Value<int> type,
+      Value<String?> iconKey,
+      Value<bool> alarmEnabled,
+      Value<String?> subject,
     });
 typedef $$TasksTableUpdateCompanionBuilder =
     TasksCompanion Function({
@@ -1212,6 +1962,10 @@ typedef $$TasksTableUpdateCompanionBuilder =
       Value<bool> isCompleted,
       Value<int> priority,
       Value<DateTime> createdAt,
+      Value<int> type,
+      Value<String?> iconKey,
+      Value<bool> alarmEnabled,
+      Value<String?> subject,
     });
 
 class $$TasksTableFilterComposer extends Composer<_$AppDatabase, $TasksTable> {
@@ -1254,6 +2008,26 @@ class $$TasksTableFilterComposer extends Composer<_$AppDatabase, $TasksTable> {
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get iconKey => $composableBuilder(
+    column: $table.iconKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get alarmEnabled => $composableBuilder(
+    column: $table.alarmEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get subject => $composableBuilder(
+    column: $table.subject,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -1301,6 +2075,26 @@ class $$TasksTableOrderingComposer
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get iconKey => $composableBuilder(
+    column: $table.iconKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get alarmEnabled => $composableBuilder(
+    column: $table.alarmEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get subject => $composableBuilder(
+    column: $table.subject,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$TasksTableAnnotationComposer
@@ -1336,6 +2130,20 @@ class $$TasksTableAnnotationComposer
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<String> get iconKey =>
+      $composableBuilder(column: $table.iconKey, builder: (column) => column);
+
+  GeneratedColumn<bool> get alarmEnabled => $composableBuilder(
+    column: $table.alarmEnabled,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get subject =>
+      $composableBuilder(column: $table.subject, builder: (column) => column);
 }
 
 class $$TasksTableTableManager
@@ -1373,6 +2181,10 @@ class $$TasksTableTableManager
                 Value<bool> isCompleted = const Value.absent(),
                 Value<int> priority = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<int> type = const Value.absent(),
+                Value<String?> iconKey = const Value.absent(),
+                Value<bool> alarmEnabled = const Value.absent(),
+                Value<String?> subject = const Value.absent(),
               }) => TasksCompanion(
                 id: id,
                 title: title,
@@ -1381,6 +2193,10 @@ class $$TasksTableTableManager
                 isCompleted: isCompleted,
                 priority: priority,
                 createdAt: createdAt,
+                type: type,
+                iconKey: iconKey,
+                alarmEnabled: alarmEnabled,
+                subject: subject,
               ),
           createCompanionCallback:
               ({
@@ -1391,6 +2207,10 @@ class $$TasksTableTableManager
                 Value<bool> isCompleted = const Value.absent(),
                 Value<int> priority = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<int> type = const Value.absent(),
+                Value<String?> iconKey = const Value.absent(),
+                Value<bool> alarmEnabled = const Value.absent(),
+                Value<String?> subject = const Value.absent(),
               }) => TasksCompanion.insert(
                 id: id,
                 title: title,
@@ -1399,6 +2219,10 @@ class $$TasksTableTableManager
                 isCompleted: isCompleted,
                 priority: priority,
                 createdAt: createdAt,
+                type: type,
+                iconKey: iconKey,
+                alarmEnabled: alarmEnabled,
+                subject: subject,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -1885,6 +2709,362 @@ typedef $$AppFlagsTableProcessedTableManager =
       AppFlag,
       PrefetchHooks Function()
     >;
+typedef $$SubjectPreferencesTableCreateCompanionBuilder =
+    SubjectPreferencesCompanion Function({
+      required String subjectKey,
+      Value<int?> colorValue,
+      Value<int> rowid,
+    });
+typedef $$SubjectPreferencesTableUpdateCompanionBuilder =
+    SubjectPreferencesCompanion Function({
+      Value<String> subjectKey,
+      Value<int?> colorValue,
+      Value<int> rowid,
+    });
+
+class $$SubjectPreferencesTableFilterComposer
+    extends Composer<_$AppDatabase, $SubjectPreferencesTable> {
+  $$SubjectPreferencesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get subjectKey => $composableBuilder(
+    column: $table.subjectKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get colorValue => $composableBuilder(
+    column: $table.colorValue,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SubjectPreferencesTableOrderingComposer
+    extends Composer<_$AppDatabase, $SubjectPreferencesTable> {
+  $$SubjectPreferencesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get subjectKey => $composableBuilder(
+    column: $table.subjectKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get colorValue => $composableBuilder(
+    column: $table.colorValue,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SubjectPreferencesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SubjectPreferencesTable> {
+  $$SubjectPreferencesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get subjectKey => $composableBuilder(
+    column: $table.subjectKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get colorValue => $composableBuilder(
+    column: $table.colorValue,
+    builder: (column) => column,
+  );
+}
+
+class $$SubjectPreferencesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SubjectPreferencesTable,
+          SubjectPreference,
+          $$SubjectPreferencesTableFilterComposer,
+          $$SubjectPreferencesTableOrderingComposer,
+          $$SubjectPreferencesTableAnnotationComposer,
+          $$SubjectPreferencesTableCreateCompanionBuilder,
+          $$SubjectPreferencesTableUpdateCompanionBuilder,
+          (
+            SubjectPreference,
+            BaseReferences<
+              _$AppDatabase,
+              $SubjectPreferencesTable,
+              SubjectPreference
+            >,
+          ),
+          SubjectPreference,
+          PrefetchHooks Function()
+        > {
+  $$SubjectPreferencesTableTableManager(
+    _$AppDatabase db,
+    $SubjectPreferencesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SubjectPreferencesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SubjectPreferencesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SubjectPreferencesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> subjectKey = const Value.absent(),
+                Value<int?> colorValue = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SubjectPreferencesCompanion(
+                subjectKey: subjectKey,
+                colorValue: colorValue,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String subjectKey,
+                Value<int?> colorValue = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SubjectPreferencesCompanion.insert(
+                subjectKey: subjectKey,
+                colorValue: colorValue,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SubjectPreferencesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SubjectPreferencesTable,
+      SubjectPreference,
+      $$SubjectPreferencesTableFilterComposer,
+      $$SubjectPreferencesTableOrderingComposer,
+      $$SubjectPreferencesTableAnnotationComposer,
+      $$SubjectPreferencesTableCreateCompanionBuilder,
+      $$SubjectPreferencesTableUpdateCompanionBuilder,
+      (
+        SubjectPreference,
+        BaseReferences<
+          _$AppDatabase,
+          $SubjectPreferencesTable,
+          SubjectPreference
+        >,
+      ),
+      SubjectPreference,
+      PrefetchHooks Function()
+    >;
+typedef $$ScheduleOverridesTableCreateCompanionBuilder =
+    ScheduleOverridesCompanion Function({
+      required String subjectKey,
+      required String day,
+      Value<String?> building,
+      Value<String?> classroom,
+      Value<int> rowid,
+    });
+typedef $$ScheduleOverridesTableUpdateCompanionBuilder =
+    ScheduleOverridesCompanion Function({
+      Value<String> subjectKey,
+      Value<String> day,
+      Value<String?> building,
+      Value<String?> classroom,
+      Value<int> rowid,
+    });
+
+class $$ScheduleOverridesTableFilterComposer
+    extends Composer<_$AppDatabase, $ScheduleOverridesTable> {
+  $$ScheduleOverridesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get subjectKey => $composableBuilder(
+    column: $table.subjectKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get day => $composableBuilder(
+    column: $table.day,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get building => $composableBuilder(
+    column: $table.building,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get classroom => $composableBuilder(
+    column: $table.classroom,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ScheduleOverridesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ScheduleOverridesTable> {
+  $$ScheduleOverridesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get subjectKey => $composableBuilder(
+    column: $table.subjectKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get day => $composableBuilder(
+    column: $table.day,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get building => $composableBuilder(
+    column: $table.building,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get classroom => $composableBuilder(
+    column: $table.classroom,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ScheduleOverridesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ScheduleOverridesTable> {
+  $$ScheduleOverridesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get subjectKey => $composableBuilder(
+    column: $table.subjectKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get day =>
+      $composableBuilder(column: $table.day, builder: (column) => column);
+
+  GeneratedColumn<String> get building =>
+      $composableBuilder(column: $table.building, builder: (column) => column);
+
+  GeneratedColumn<String> get classroom =>
+      $composableBuilder(column: $table.classroom, builder: (column) => column);
+}
+
+class $$ScheduleOverridesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ScheduleOverridesTable,
+          ScheduleOverride,
+          $$ScheduleOverridesTableFilterComposer,
+          $$ScheduleOverridesTableOrderingComposer,
+          $$ScheduleOverridesTableAnnotationComposer,
+          $$ScheduleOverridesTableCreateCompanionBuilder,
+          $$ScheduleOverridesTableUpdateCompanionBuilder,
+          (
+            ScheduleOverride,
+            BaseReferences<
+              _$AppDatabase,
+              $ScheduleOverridesTable,
+              ScheduleOverride
+            >,
+          ),
+          ScheduleOverride,
+          PrefetchHooks Function()
+        > {
+  $$ScheduleOverridesTableTableManager(
+    _$AppDatabase db,
+    $ScheduleOverridesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ScheduleOverridesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ScheduleOverridesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ScheduleOverridesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> subjectKey = const Value.absent(),
+                Value<String> day = const Value.absent(),
+                Value<String?> building = const Value.absent(),
+                Value<String?> classroom = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ScheduleOverridesCompanion(
+                subjectKey: subjectKey,
+                day: day,
+                building: building,
+                classroom: classroom,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String subjectKey,
+                required String day,
+                Value<String?> building = const Value.absent(),
+                Value<String?> classroom = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ScheduleOverridesCompanion.insert(
+                subjectKey: subjectKey,
+                day: day,
+                building: building,
+                classroom: classroom,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ScheduleOverridesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ScheduleOverridesTable,
+      ScheduleOverride,
+      $$ScheduleOverridesTableFilterComposer,
+      $$ScheduleOverridesTableOrderingComposer,
+      $$ScheduleOverridesTableAnnotationComposer,
+      $$ScheduleOverridesTableCreateCompanionBuilder,
+      $$ScheduleOverridesTableUpdateCompanionBuilder,
+      (
+        ScheduleOverride,
+        BaseReferences<
+          _$AppDatabase,
+          $ScheduleOverridesTable,
+          ScheduleOverride
+        >,
+      ),
+      ScheduleOverride,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -1897,4 +3077,8 @@ class $AppDatabaseManager {
       $$RemoteCacheEntriesTableTableManager(_db, _db.remoteCacheEntries);
   $$AppFlagsTableTableManager get appFlags =>
       $$AppFlagsTableTableManager(_db, _db.appFlags);
+  $$SubjectPreferencesTableTableManager get subjectPreferences =>
+      $$SubjectPreferencesTableTableManager(_db, _db.subjectPreferences);
+  $$ScheduleOverridesTableTableManager get scheduleOverrides =>
+      $$ScheduleOverridesTableTableManager(_db, _db.scheduleOverrides);
 }

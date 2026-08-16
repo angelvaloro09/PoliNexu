@@ -24,6 +24,7 @@ class PoliNexuApp extends StatelessWidget {
       ],
       child: MaterialApp.router(
         title: 'PoliNexu',
+        debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
         themeMode: ThemeMode.system,

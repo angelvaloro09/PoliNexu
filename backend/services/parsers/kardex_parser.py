@@ -11,6 +11,8 @@ materias cursadas ese semestre.
 
 from bs4 import BeautifulSoup
 
+from .text_normalize import normalize_subject, normalize_title
+
 
 def _label_text(soup: BeautifulSoup, element_id: str) -> str:
     tag = soup.find(id=element_id)
@@ -37,7 +39,7 @@ def parse_kardex(html: str) -> dict:
                 subjects.append(
                     {
                         "key": cells[0].get_text(strip=True),
-                        "subject": cells[1].get_text(strip=True),
+                        "subject": normalize_subject(cells[1].get_text(strip=True)),
                         "date": cells[2].get_text(strip=True),
                         "period": cells[3].get_text(strip=True),
                         "exam_type": cells[4].get_text(strip=True),
@@ -48,7 +50,7 @@ def parse_kardex(html: str) -> dict:
             semesters.append({"label": label, "subjects": subjects})
 
     return {
-        "career": _label_text(soup, "ctl00_mainCopy_Lbl_Carrera"),
+        "career": normalize_title(_label_text(soup, "ctl00_mainCopy_Lbl_Carrera")),
         "study_plan": _label_text(soup, "ctl00_mainCopy_Lbl_Plan"),
         "average": _label_text(soup, "ctl00_mainCopy_Lbl_Promedio"),
         "semesters": semesters,

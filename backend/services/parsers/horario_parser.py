@@ -9,6 +9,8 @@ celda de día contiene, cuando hay clase, dos líneas de texto separadas por
 
 from bs4 import BeautifulSoup
 
+from .text_normalize import extract_subject_code, normalize_subject, normalize_title
+
 _DAYS = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"]
 _DAY_LABELS = {
     "Lunes": "Lunes",
@@ -59,11 +61,13 @@ def parse_schedule(html: str) -> list[dict]:
             if parsed is not None:
                 sessions.append({"day": _DAY_LABELS[day], **parsed})
 
+        raw_subject = cells[1].get_text(strip=True)
         entries.append(
             {
                 "group": cells[0].get_text(strip=True),
-                "subject": cells[1].get_text(strip=True),
-                "teachers": cells[2].get_text(strip=True),
+                "code": extract_subject_code(raw_subject),
+                "subject": normalize_subject(raw_subject),
+                "teachers": normalize_title(cells[2].get_text(strip=True)),
                 "sessions": sessions,
             }
         )

@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../domain/models/grade_entry.dart';
+import '../../../domain/models/session_required_exception.dart';
 import '../../../domain/repositories/grades_repository.dart';
 import '../../../domain/repositories/notification_service.dart';
 import 'grades_state.dart';
@@ -10,8 +11,22 @@ class GradesCubit extends Cubit<GradesState> {
 
   GradesCubit(this._repository, this._notificationService) : super(const GradesInitial());
 
-  Future<void> loadGrades() async {
-    emit(const GradesLoading());
+  Future<void> loadGrades({bool force = false}) async {
+    // Cubit singleton compartido entre pantallas: sin esta guarda cada
+    // reconstrucción de la pantalla repetiría el fetch. `force` lo usan
+    // pull-to-refresh y "reintentar".
+    if (!force && state is GradesLoaded) return;
+
+    final cachedState = state;
+    if (cachedState is! GradesLoaded) {
+      final cached = await _repository.getCachedOnly();
+      if (cached != null) {
+        emit(GradesLoaded(cached.value, fetchedAt: cached.fetchedAt, fromCache: true));
+      } else {
+        emit(const GradesLoading());
+      }
+    }
+
     try {
       final data = await _repository.getGrades();
 
@@ -25,9 +40,12 @@ class GradesCubit extends Cubit<GradesState> {
         data.value,
         fetchedAt: data.fetchedAt,
         fromCache: data.fromCache,
+        sessionExpired: data.sessionExpired,
       ));
     } catch (e) {
-      emit(GradesError(e.toString()));
+      if (state is! GradesLoaded) {
+        emit(GradesError(e.toString(), sessionRequired: e is SessionRequiredException));
+      }
     }
   }
 

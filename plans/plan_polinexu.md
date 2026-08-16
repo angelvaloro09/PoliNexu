@@ -325,10 +325,11 @@ registro de evaluación ordinaria/extraordinaria) sin consultar el PDF a mano.
   `data/repositories/calendar_repository_impl.dart` (mismo patrón
   fetch-then-cache-fallback que `ScheduleRepositoryImpl`, cachea en
   `RemoteCacheEntries` bajo la clave `academic_calendar`), `BackendClient.getAcademicCalendar()`.
-- [x] **Cubit + UI** — `CalendarCubit`, integrado en `TaskCalendarView` (Tareas →
-  pestaña Calendario): días cubiertos por un evento IPN se tiñen con el color
-  de su categoría en el `TableCalendar`, y aparecen en una sección
-  "Calendario IPN" al seleccionar el día.
+- [x] **Cubit + UI** — `CalendarCubit`, integrado en la vista Calendario de
+  Horario (`schedule_calendar_view.dart`, movida desde Tareas en la Fase 10):
+  días cubiertos por un evento IPN se tiñen con el color/ícono de su
+  categoría en el `TableCalendar`, y aparecen en una sección "Calendario IPN"
+  al seleccionar el día.
 - [x] **Notificaciones** — `NotificationService.scheduleAcademicCalendarNotifications`,
   aviso a las 9:00 a.m. del día anterior a cada evento (rango de IDs
   `4000-4999`, reservado junto a tareas/clases/calificaciones).
@@ -338,3 +339,46 @@ registro de evaluación ordinaria/extraordinaria) sin consultar el PDF a mano.
   https://www.ipn.mx/assets/files/website/docs/inicio/calendarioipn-escolarizada.pdf).
 - [ ] Probar en dispositivo: `GET /calendar/ipn` responde, marcadores se ven en
   el calendario, notificación de prueba se programa.
+
+### Fase 10: Persistencia + rediseño Horario/Tareas (Sprint 10)
+
+Objetivo: eliminar la re-carga de red en cada cambio de pestaña, y una
+tanda de mejoras de UI/UX pedidas tras probar la app en dispositivo real.
+
+- [x] **Persistencia y velocidad** — `ScheduleCubit`/`GradesCubit`/`KardexCubit`/
+  `CalendarCubit`/`TasksCubit` pasan de `registerFactory` a
+  `registerLazySingleton` en `injection.dart`; las pantallas usan
+  `BlocProvider.value` (no `create:`) para no cerrarlos al desmontar. Cada
+  `loadX({force})` gana una guarda de "ya cargado" + pintura instantánea
+  desde `getCachedOnly()` (nuevo método en los repos de Schedule/Grades/
+  Kardex/Calendar) antes de ir a red.
+- [x] **Normalización de texto** — `backend/services/parsers/text_normalize.py`
+  (`normalize_title`), aplicado en horario/grades/kardex parsers — el SAES
+  devuelve todo en mayúsculas fijas.
+- [x] **NavBar** — label "Calificaciones" → "Notas" (`main_shell.dart`), ya no
+  se rompe a dos líneas.
+- [x] **Horario rediseñado** — selector de día de la semana (chip LUN/24 AGO)
+  en `schedule_screen.dart`, con toggle Semana/Calendario en el AppBar. La
+  vista Calendario (ex-`task_calendar_view.dart`, ahora
+  `schedule_calendar_view.dart`) se movió de la pantalla Tareas a Horario;
+  Tareas quedó como lista simple.
+- [x] **Color de materia + override de edificio/salón por día** — tablas Drift
+  `SubjectPreferences`/`ScheduleOverrides` (`schemaVersion` 5),
+  `ScheduleOverridesRepository`/Cubit, bottom sheet
+  `schedule_override_sheet.dart` desde el ícono de editar en cada sesión.
+- [x] **Clasificación de tareas** — `TaskType` (tarea/examen/evento
+  importante), ícono elegible de un set curado (`core/constants/task_icons.dart`),
+  interruptor de alarma por tarea, materia con autocompletado desde el
+  horario actual — columnas nuevas en `Tasks` (mismo bump de schema).
+- [x] **Calendario IPN con íconos + regla de prioridad** — cada categoría
+  tiene un ícono representativo; si un examen/evento importante del alumno en
+  prioridad alta cae el mismo día que un evento IPN, el del alumno gana el
+  slot visual (el evento IPN se sigue listando abajo).
+- [x] **Simulador de promedios eliminado** — pantalla, ruta y botón borrados.
+- [ ] **Pendiente del usuario (no es código):** confirmar en Render que
+  `CREDENTIALS_KEY` está seteada igual que en `.env` local, y revisar logs de
+  `/auth/login` en producción — la investigación de código no encontró bug en
+  el flujo de guardado de `saes_accounts`.
+- [ ] Probar en dispositivo: navegar entre pestañas repetidamente sin ver
+  refetch de red; editar color/salón de una materia y confirmar que persiste
+  tras reiniciar la app; crear tarea con ícono/alarma/materia.

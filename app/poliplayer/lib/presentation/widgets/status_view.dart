@@ -32,18 +32,24 @@ class StatusView extends StatelessWidget {
     this.isError = false,
   });
 
-  /// Fallo al cargar: siempre ofrece reintentar.
+  /// Fallo al cargar: siempre ofrece reintentar. `title`/`icon`/`actionLabel`
+  /// son personalizables para casos como "Requiere sesión" (Notas/Kárdex sin
+  /// caché tras expirar la sesión), donde el botón no reintenta sino que
+  /// manda a re-login.
   factory StatusView.error({
     Key? key,
     required String message,
     required VoidCallback onRetry,
+    String title = 'Algo salió mal',
+    IconData icon = Symbols.error_rounded,
+    String actionLabel = 'Reintentar',
   }) =>
       StatusView(
         key: key,
-        icon: Symbols.error_rounded,
-        title: 'Algo salió mal',
+        icon: icon,
+        title: title,
         message: message,
-        actionLabel: 'Reintentar',
+        actionLabel: actionLabel,
         onAction: onRetry,
         isError: true,
       );

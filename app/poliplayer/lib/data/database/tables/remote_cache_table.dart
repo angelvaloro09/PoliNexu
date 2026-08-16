@@ -22,4 +22,15 @@ abstract final class RemoteCacheKeys {
   static const grades = 'grades';
   static const kardex = 'kardex';
   static const academicCalendar = 'academic_calendar';
+  static const academicStatus = 'academic_status';
+  static const reinscription = 'reinscription';
 }
+
+/// Banderas del ciclo de vida de Horario/Calificaciones (ver
+/// `SchoolCycleLifecycleService`), guardadas en `AppFlags` vía
+/// `AppDatabase.readFlag`/`writeFlag`.
+abstract final class CycleFlags {
+  /// `'open'` (normal) o `'closed'` (fin de periodo, esperando repoblado).
+  static const gate = 'cycle_gate';
+}
+

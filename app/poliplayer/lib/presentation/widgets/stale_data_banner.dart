@@ -15,7 +15,18 @@ import '../../core/theme/app_text_styles.dart';
 class StaleDataBanner extends StatelessWidget {
   final DateTime fetchedAt;
 
-  const StaleDataBanner({super.key, required this.fetchedAt});
+  /// `true` cuando específicamente la sesión del SAES expiró (no sólo falta
+  /// de red) — cambia el mensaje/ícono y ofrece un botón de login directo en
+  /// vez de sólo advertir que el dato es viejo.
+  final bool sessionExpired;
+  final VoidCallback? onLoginTap;
+
+  const StaleDataBanner({
+    super.key,
+    required this.fetchedAt,
+    this.sessionExpired = false,
+    this.onLoginTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -35,17 +46,24 @@ class StaleDataBanner extends StatelessWidget {
       child: Row(
         children: [
           Icon(
-            Symbols.cloud_off_rounded,
+            sessionExpired ? Symbols.lock_clock_rounded : Symbols.cloud_off_rounded,
             size: AppIconSize.sm,
             color: colorScheme.onTertiaryContainer,
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
-              'Sin conexión con el SAES · datos del ${_label(fetchedAt)}',
+              sessionExpired
+                  ? 'Sesión expirada · datos del ${_label(fetchedAt)}'
+                  : 'Sin conexión con el SAES · datos del ${_label(fetchedAt)}',
               style: theme.textTheme.meta?.copyWith(color: colorScheme.onTertiaryContainer),
             ),
           ),
+          if (sessionExpired && onLoginTap != null)
+            TextButton(
+              onPressed: onLoginTap,
+              child: const Text('Iniciar sesión'),
+            ),
         ],
       ),
     );
