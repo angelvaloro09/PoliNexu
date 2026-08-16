@@ -131,12 +131,6 @@ class _AcademicStatusContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheduled = _scheduledSubjectCodes();
-    final failed = status.failed.where((s) => !scheduled.contains(s.code)).toList();
-    final notTaken = status.notTaken.where((s) => !scheduled.contains(s.code)).toList();
-
-    if (failed.isEmpty && notTaken.isEmpty && status.outOfSequence.isEmpty) {
-      return const _EmptyPending();
-    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -149,50 +143,73 @@ class _AcademicStatusContent extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
         ],
-        for (final subject in failed) ...[
-          _SubjectCard(subject: subject, badge: 'Recurse'),
-          const SizedBox(height: AppSpacing.sm),
-        ],
-        for (final subject in notTaken) ...[
-          _SubjectCard(subject: subject),
-          const SizedBox(height: AppSpacing.sm),
-        ],
-        for (final subject in status.outOfSequence) ...[
-          _SubjectCard(subject: subject),
-          const SizedBox(height: AppSpacing.sm),
-        ],
+        _AcademicStatusGroup(
+          title: 'Materias reprobadas',
+          subjects: status.failed,
+          emptyMessage: 'Sin materias reprobadas.',
+          badgeFor: (subject) => scheduled.contains(subject.code) ? _Badge.recurse : null,
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        _AcademicStatusGroup(
+          title: 'Materias no cursadas',
+          subjects: status.notTaken,
+          emptyMessage: 'Sin materias pendientes por cursar.',
+          badgeFor: (subject) => scheduled.contains(subject.code) ? _Badge.cursando : null,
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        _AcademicStatusGroup(
+          title: 'Materias desfasadas',
+          subjects: status.outOfSequence,
+          emptyMessage: 'Sin materias desfasadas.',
+          badgeFor: (subject) => null,
+        ),
       ],
     );
   }
 }
 
-class _EmptyPending extends StatelessWidget {
-  const _EmptyPending();
+class _AcademicStatusGroup extends StatelessWidget {
+  final String title;
+  final List<AcademicStatusSubject> subjects;
+  final String emptyMessage;
+  final _Badge? Function(AcademicStatusSubject) badgeFor;
+
+  const _AcademicStatusGroup({
+    required this.title,
+    required this.subjects,
+    required this.emptyMessage,
+    required this.badgeFor,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    return AppCard(
-      child: Row(
-        children: [
-          Icon(Symbols.task_alt_rounded, color: colorScheme.primary),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Text(
-              'Sin materias pendientes fuera de tu horario actual.',
-              style: theme.textTheme.bodySecondary,
-            ),
-          ),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionHeader(title: title, count: subjects.isEmpty ? null : subjects.length),
+        if (subjects.isEmpty)
+          InlineStatus(icon: Symbols.task_alt_rounded, message: emptyMessage)
+        else
+          for (final subject in subjects) ...[
+            _SubjectCard(subject: subject, badge: badgeFor(subject)),
+            const SizedBox(height: AppSpacing.sm),
+          ],
+      ],
     );
   }
 }
 
+enum _Badge {
+  recurse('Recurse'),
+  cursando('Cursando');
+
+  final String label;
+  const _Badge(this.label);
+}
+
 class _SubjectCard extends StatelessWidget {
   final AcademicStatusSubject subject;
-  final String? badge;
+  final _Badge? badge;
 
   const _SubjectCard({required this.subject, this.badge});
 
@@ -200,6 +217,11 @@ class _SubjectCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final badgeColor = switch (badge) {
+      _Badge.recurse => (bg: colorScheme.errorContainer, fg: colorScheme.onErrorContainer),
+      _Badge.cursando => (bg: colorScheme.tertiaryContainer, fg: colorScheme.onTertiaryContainer),
+      null => null,
+    };
 
     return AppCard(
       child: Row(
@@ -217,17 +239,17 @@ class _SubjectCard extends StatelessWidget {
               ],
             ),
           ),
-          if (badge != null) ...[
+          if (badge != null && badgeColor != null) ...[
             const SizedBox(width: AppSpacing.sm),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 4),
               decoration: BoxDecoration(
-                color: colorScheme.errorContainer,
+                color: badgeColor.bg,
                 borderRadius: BorderRadius.circular(AppRadius.pill),
               ),
               child: Text(
-                badge!,
-                style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onErrorContainer),
+                badge!.label,
+                style: theme.textTheme.labelSmall?.copyWith(color: badgeColor.fg),
               ),
             ),
           ],
