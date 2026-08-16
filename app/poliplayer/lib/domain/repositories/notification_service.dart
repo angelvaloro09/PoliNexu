@@ -1,3 +1,4 @@
+import '../models/academic_calendar_event.dart';
 import '../models/schedule_entry.dart';
 import '../models/task_item.dart';
 
@@ -22,4 +23,9 @@ abstract class NotificationService {
   Future<void> scheduleClassAlarms(List<ScheduleEntry> entries);
 
   Future<void> notifyNewGrade({required String subject, required String grade});
+
+  /// Reemplaza todos los avisos del calendario académico institucional por
+  /// los de [events] — cancela los anteriores y programa un aviso a las
+  /// 9:00 a.m. del día anterior al inicio de cada evento.
+  Future<void> scheduleAcademicCalendarNotifications(List<AcademicCalendarEvent> events);
 }

@@ -8,6 +8,7 @@ import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../domain/models/task_item.dart';
+import '../../blocs/calendar/calendar_cubit.dart';
 import '../../blocs/schedule/schedule_cubit.dart';
 import '../../blocs/tasks/tasks_cubit.dart';
 import '../../blocs/tasks/tasks_state.dart';
@@ -30,6 +31,10 @@ class TasksScreen extends StatelessWidget {
         BlocProvider<TasksCubit>(create: (_) => getIt<TasksCubit>()),
         // El Horario se usa en la pestaña Calendario para unificar clases + tareas.
         BlocProvider<ScheduleCubit>(create: (_) => getIt<ScheduleCubit>()..loadSchedule()),
+        // Fechas institucionales del IPN (vacaciones, inicio/fin de semestre, etc.).
+        BlocProvider<CalendarCubit>(
+          create: (_) => getIt<CalendarCubit>()..loadAcademicCalendar(),
+        ),
       ],
       child: const _TasksView(),
     );

@@ -4,6 +4,7 @@ import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../../core/utils/weekday.dart';
+import '../../domain/models/academic_calendar_event.dart';
 import '../../domain/models/schedule_entry.dart';
 import '../../domain/models/task_item.dart';
 import '../../domain/repositories/notification_service.dart';
@@ -19,6 +20,10 @@ const _classesChannelDescription = 'Avisos antes de que comience cada clase';
 const _gradesChannelId = 'grades_channel';
 const _gradesChannelName = 'Calificaciones';
 const _gradesChannelDescription = 'Avisos de calificaciones nuevas en el SAES';
+
+const _calendarChannelId = 'academic_calendar_channel';
+const _calendarChannelName = 'Calendario académico IPN';
+const _calendarChannelDescription = 'Avisos de fechas del calendario institucional del IPN';
 
 /// Minutos de anticipación con los que suena la alarma antes de cada clase.
 const _classAlarmLeadMinutes = 10;
@@ -74,6 +79,11 @@ class NotificationServiceImpl implements NotificationService {
         _gradesChannelId,
         _gradesChannelName,
         description: _gradesChannelDescription,
+      ));
+      await android.createNotificationChannel(const AndroidNotificationChannel(
+        _calendarChannelId,
+        _calendarChannelName,
+        description: _calendarChannelDescription,
       ));
     }
 
@@ -193,11 +203,50 @@ class NotificationServiceImpl implements NotificationService {
     );
   }
 
+  @override
+  Future<void> scheduleAcademicCalendarNotifications(List<AcademicCalendarEvent> events) async {
+    for (var id = _calendarIdBase; id < _calendarIdBase + _calendarIdRange; id++) {
+      await _plugin.cancel(id: id);
+    }
+
+    final now = tz.TZDateTime.now(tz.local);
+
+    for (final event in events) {
+      final start = event.startDate;
+      final reminderDay = DateTime(start.year, start.month, start.day - 1);
+      final scheduled =
+          tz.TZDateTime(tz.local, reminderDay.year, reminderDay.month, reminderDay.day, 9);
+      if (scheduled.isBefore(now)) continue;
+
+      await _plugin.zonedSchedule(
+        id: _calendarNotificationId(event.id),
+        title: 'Mañana: ${event.title}',
+        body: 'Calendario académico IPN',
+        scheduledDate: scheduled,
+        notificationDetails: const NotificationDetails(
+          android: AndroidNotificationDetails(
+            _calendarChannelId,
+            _calendarChannelName,
+            channelDescription: _calendarChannelDescription,
+            icon: '@mipmap/ic_launcher',
+            priority: Priority.defaultPriority,
+          ),
+        ),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      );
+    }
+  }
+
   static const _taskIdBase = 1000;
   static const _classAlarmIdBase = 2000;
   static const _classAlarmIdRange = 1000;
   static const _gradeIdBase = 3000;
   static const _gradeIdRange = 1000;
+  static const _calendarIdBase = 4000;
+  static const _calendarIdRange = 1000;
+
+  int _calendarNotificationId(String eventId) =>
+      _calendarIdBase + (eventId.hashCode.abs() % _calendarIdRange);
 
   int _taskNotificationId(int taskId) => _taskIdBase + taskId;
 

@@ -7,6 +7,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:poliplayer/app.dart';
 import 'package:poliplayer/core/constants/saes_schools.dart';
 import 'package:poliplayer/core/di/injection.dart';
+import 'package:poliplayer/domain/models/academic_calendar_event.dart';
 import 'package:poliplayer/domain/models/auth_login_result.dart';
 import 'package:poliplayer/domain/models/grade_entry.dart';
 import 'package:poliplayer/domain/models/kardex.dart';
@@ -16,6 +17,7 @@ import 'package:poliplayer/domain/models/session_restore_result.dart';
 import 'package:poliplayer/domain/models/task_item.dart';
 import 'package:poliplayer/domain/repositories/app_preferences.dart';
 import 'package:poliplayer/domain/repositories/auth_repository.dart';
+import 'package:poliplayer/domain/repositories/calendar_repository.dart';
 import 'package:poliplayer/domain/repositories/grades_repository.dart';
 import 'package:poliplayer/domain/repositories/kardex_repository.dart';
 import 'package:poliplayer/domain/repositories/notification_service.dart';
@@ -127,6 +129,12 @@ class _FakeScheduleRepository implements ScheduleRepository {
       RemoteData.fresh(const <ScheduleEntry>[]);
 }
 
+class _FakeCalendarRepository implements CalendarRepository {
+  @override
+  Future<RemoteData<List<AcademicCalendarEvent>>> getAcademicCalendar() async =>
+      RemoteData.fresh(const <AcademicCalendarEvent>[]);
+}
+
 class _FakeGradesRepository implements GradesRepository {
   @override
   Future<RemoteData<List<GradeEntry>>> getGrades() async =>
@@ -166,6 +174,9 @@ class _FakeNotificationService implements NotificationService {
 
   @override
   Future<void> notifyNewGrade({required String subject, required String grade}) async {}
+
+  @override
+  Future<void> scheduleAcademicCalendarNotifications(List<AcademicCalendarEvent> events) async {}
 }
 
 void main() {
@@ -200,6 +211,7 @@ void main() {
     getIt.registerLazySingleton<TaskRepository>(() => _FakeTaskRepository());
     getIt.unregister<ScheduleRepository>();
     getIt.registerLazySingleton<ScheduleRepository>(() => _FakeScheduleRepository());
+    getIt.registerLazySingleton<CalendarRepository>(() => _FakeCalendarRepository());
     getIt.unregister<GradesRepository>();
     getIt.registerLazySingleton<GradesRepository>(() => _FakeGradesRepository());
     getIt.unregister<KardexRepository>();

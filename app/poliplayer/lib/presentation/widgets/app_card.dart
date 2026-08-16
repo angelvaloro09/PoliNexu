@@ -36,12 +36,21 @@ class AppCard extends StatelessWidget {
     Widget content = Padding(padding: padding, child: child);
 
     if (accentColor != null) {
-      content = Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(width: 4, color: accentColor),
-          Expanded(child: content),
-        ],
+      // `IntrinsicHeight` es necesario: esta tarjeta vive dentro de listas
+      // (Sliver/ListView) que dan altura no acotada (maxHeight=infinity) a
+      // sus hijos. `crossAxisAlignment.stretch` intenta forzar esa altura a
+      // la barra de acento de 4px, y un `Container` de solo ancho no puede
+      // resolver una altura infinita — crashea con "BoxConstraints forces an
+      // infinite height". `IntrinsicHeight` mide primero la altura real del
+      // contenido y se la pasa al `Row` como una altura acotada normal.
+      content = IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(width: 4, color: accentColor),
+            Expanded(child: content),
+          ],
+        ),
       );
     }
 

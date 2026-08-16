@@ -6,7 +6,8 @@ import 'package:drift/drift.dart';
 /// red. Se guarda el JSON tal cual en vez de modelar tres esquemas: los datos
 /// sólo se leen para pintarlos, nunca se consultan por campo.
 ///
-/// Claves usadas: `schedule`, `grades`, `kardex` (ver `RemoteCacheKeys`).
+/// Claves usadas: `schedule`, `grades`, `kardex`, `academic_calendar` (ver
+/// `RemoteCacheKeys`).
 class RemoteCacheEntries extends Table {
   TextColumn get cacheKey => text()();
   TextColumn get payloadJson => text()();
@@ -20,4 +21,5 @@ abstract final class RemoteCacheKeys {
   static const schedule = 'schedule';
   static const grades = 'grades';
   static const kardex = 'kardex';
+  static const academicCalendar = 'academic_calendar';
 }

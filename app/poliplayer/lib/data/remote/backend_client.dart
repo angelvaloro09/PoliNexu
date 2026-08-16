@@ -261,6 +261,40 @@ extension KardexDtoJson on KardexDto {
       };
 }
 
+class AcademicCalendarEventDto {
+  final String id;
+  final String title;
+  final String category;
+  final String startDate;
+  final String endDate;
+
+  AcademicCalendarEventDto({
+    required this.id,
+    required this.title,
+    required this.category,
+    required this.startDate,
+    required this.endDate,
+  });
+
+  factory AcademicCalendarEventDto.fromJson(Map<String, dynamic> json) => AcademicCalendarEventDto(
+        id: json['id'] as String,
+        title: json['title'] as String,
+        category: json['category'] as String,
+        startDate: json['start_date'] as String,
+        endDate: json['end_date'] as String,
+      );
+}
+
+extension AcademicCalendarEventDtoJson on AcademicCalendarEventDto {
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'category': category,
+        'start_date': startDate,
+        'end_date': endDate,
+      };
+}
+
 /// Cliente HTTP del backend FastAPI (`backend/routers/auth.py`, `saes.py`).
 /// Todo el scraping del SAES vive en el backend — el cliente Flutter nunca
 /// habla directo con el SAES.
@@ -435,6 +469,19 @@ class BackendClient {
         queryParameters: {'session_token': sessionToken},
       );
       return KardexDto.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _mapError(e);
+    }
+  }
+
+  /// Calendario académico institucional del IPN. Dato público, sin sesión.
+  Future<List<AcademicCalendarEventDto>> getAcademicCalendar() async {
+    try {
+      final response = await _dio.get('/calendar/ipn');
+      final events = (response.data as Map<String, dynamic>)['events'] as List;
+      return events
+          .map((e) => AcademicCalendarEventDto.fromJson(e as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       throw _mapError(e);
     }

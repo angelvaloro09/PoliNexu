@@ -307,3 +307,34 @@ Google/Gemini), no sólo que funcione.
   borrar desde el formulario), Calendario (estilado con los tokens, estado de
   carga), Login/Reauth (CAPTCHA proporcional en vez de 200px fijos).
 - [ ] Revisión a ojo en dispositivo, claro y oscuro (ver "Verificación").
+
+### Fase 9: Calendario institucional IPN (Sprint 9)
+
+Objetivo: que todos los usuarios vean automáticamente las fechas del
+calendario académico oficial del IPN (inicio/fin de semestre, vacaciones,
+días de descanso obligatorio, Día del Politécnico, inscripción/reinscripción,
+registro de evaluación ordinaria/extraordinaria) sin consultar el PDF a mano.
+
+- [x] **Backend** — `core/academic_calendar.py` (eventos curados a mano del
+  ciclo 2026-2027, transcritos del PDF oficial del IPN — no hay parser
+  automático, ver comentario de fuente en el archivo), `models/schemas.py`
+  (`AcademicCalendarEvent`/`AcademicCalendarResponse`), `routers/calendar.py`
+  (`GET /calendar/ipn`, sin autenticación — dato público).
+- [x] **Cliente Flutter** — `domain/models/academic_calendar_event.dart`,
+  `domain/repositories/calendar_repository.dart` +
+  `data/repositories/calendar_repository_impl.dart` (mismo patrón
+  fetch-then-cache-fallback que `ScheduleRepositoryImpl`, cachea en
+  `RemoteCacheEntries` bajo la clave `academic_calendar`), `BackendClient.getAcademicCalendar()`.
+- [x] **Cubit + UI** — `CalendarCubit`, integrado en `TaskCalendarView` (Tareas →
+  pestaña Calendario): días cubiertos por un evento IPN se tiñen con el color
+  de su categoría en el `TableCalendar`, y aparecen en una sección
+  "Calendario IPN" al seleccionar el día.
+- [x] **Notificaciones** — `NotificationService.scheduleAcademicCalendarNotifications`,
+  aviso a las 9:00 a.m. del día anterior a cada evento (rango de IDs
+  `4000-4999`, reservado junto a tareas/clases/calificaciones).
+- [ ] **Verificar fechas transcritas contra el PDF oficial** — confirmar a ojo
+  al menos inicio/fin de semestre, vacaciones de invierno y Semana Santa, y
+  Día del Politécnico antes de dar el feature por terminado (ver fuente:
+  https://www.ipn.mx/assets/files/website/docs/inicio/calendarioipn-escolarizada.pdf).
+- [ ] Probar en dispositivo: `GET /calendar/ipn` responde, marcadores se ven en
+  el calendario, notificación de prueba se programa.

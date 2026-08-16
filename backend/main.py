@@ -10,7 +10,7 @@ from core.config import settings
 from core.schools import SCHOOLS
 from database.db import Base, engine, ensure_schema
 from models.schemas import SchoolOut
-from routers import auth, saes
+from routers import auth, calendar, saes
 from services.keepalive import keepalive_worker
 
 logging.basicConfig(level=logging.INFO)
@@ -52,6 +52,7 @@ app.add_middleware(
 
 app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 app.include_router(saes.router, prefix="/saes", tags=["SAES"])
+app.include_router(calendar.router, prefix="/calendar", tags=["Calendar"])
 
 
 @app.get("/schools", response_model=list[SchoolOut], tags=["Schools"])

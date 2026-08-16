@@ -1,3 +1,6 @@
+from datetime import date
+from typing import Literal
+
 from pydantic import BaseModel
 
 
@@ -119,3 +122,27 @@ class KardexResponse(BaseModel):
     study_plan: str
     average: str
     semesters: list[KardexSemester]
+
+
+AcademicCalendarCategory = Literal[
+    "inicio_periodo",
+    "fin_periodo",
+    "vacaciones",
+    "descanso_obligatorio",
+    "dia_politecnico",
+    "inscripcion_reinscripcion",
+    "evaluacion_ordinaria",
+    "evaluacion_extraordinaria",
+]
+
+
+class AcademicCalendarEvent(BaseModel):
+    id: str
+    title: str
+    category: AcademicCalendarCategory
+    start_date: date
+    end_date: date
+
+
+class AcademicCalendarResponse(BaseModel):
+    events: list[AcademicCalendarEvent]
