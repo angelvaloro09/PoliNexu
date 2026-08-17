@@ -449,11 +449,11 @@ class _DayDetail extends StatelessWidget {
                       ],
                       const SizedBox(height: AppSpacing.md),
                     ],
-                    SectionHeader(title: 'Tareas', count: visibleDayTasks.length),
+                    SectionHeader(title: 'Actividades', count: visibleDayTasks.length),
                     if (visibleDayTasks.isEmpty)
                       const InlineStatus(
                         icon: Symbols.event_available_rounded,
-                        message: 'Sin tareas para este día.',
+                        message: 'Sin actividades para este día.',
                       )
                     else
                       for (final task in visibleDayTasks) ...[

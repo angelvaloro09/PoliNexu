@@ -72,7 +72,7 @@ class _TasksViewState extends State<_TasksView> {
               subjectOptions: _scheduleSubjects(),
             ),
             icon: const Icon(Symbols.add_rounded),
-            label: const Text('Nueva tarea'),
+            label: const Text('Nueva actividad'),
           ),
         ),
       ),
@@ -88,7 +88,7 @@ class _TasksViewState extends State<_TasksView> {
         child: CustomScrollView(
           slivers: [
             SliverAppBar.large(
-              title: Text('Tareas', style: theme.textTheme.heroTitle),
+              title: Text('Actividades', style: theme.textTheme.heroTitle),
               backgroundColor: theme.colorScheme.surface,
               scrolledUnderElevation: 0,
             ),
@@ -123,7 +123,7 @@ class _TaskListView extends StatelessWidget {
           TasksLoaded(:final tasks) when tasks.isEmpty => AnimatedEntrance(
               child: StatusView.empty(
                 icon: Symbols.task_alt_rounded,
-                title: 'Sin tareas',
+                title: 'Sin actividades',
                 message: 'Anota entregas, exámenes o pendientes y te avisamos a tiempo.',
                 actionLabel: 'Crear la primera',
                 useBrandMark: true,

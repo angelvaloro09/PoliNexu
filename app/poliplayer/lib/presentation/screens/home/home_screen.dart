@@ -9,9 +9,11 @@ import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/subject_color.dart';
 import '../../../core/utils/weekday.dart';
 import '../../../domain/models/academic_calendar_event.dart';
 import '../../../domain/models/schedule_entry.dart';
+import '../../../domain/models/task_item.dart';
 import '../../blocs/calendar/calendar_cubit.dart';
 import '../../blocs/calendar/calendar_state.dart';
 import '../../blocs/schedule/schedule_cubit.dart';
@@ -99,10 +101,17 @@ class _HomeView extends StatelessWidget {
                           style: theme.textTheme.body?.copyWith(color: colorScheme.onSurfaceVariant),
                         ),
                       ),
+                      if (!isRestDay) ...[
+                        const SizedBox(height: AppSpacing.xs),
+                        AnimatedEntrance(
+                          index: 1,
+                          child: _SummaryLine(today: today),
+                        ),
+                      ],
                       const SizedBox(height: AppSpacing.xl),
                       if (isRestDay) ...[
                         AnimatedEntrance(
-                          index: 1,
+                          index: 2,
                           child: const AppCard(
                             padding: EdgeInsets.all(AppSpacing.lg),
                             child: InlineStatus(
@@ -114,26 +123,36 @@ class _HomeView extends StatelessWidget {
                         const SizedBox(height: AppSpacing.xl),
                       ] else ...[
                         AnimatedEntrance(
-                          index: 1,
+                          index: 2,
                           child: _NextClassCard(today: today),
                         ),
                         const SizedBox(height: AppSpacing.xl),
                         const AnimatedEntrance(
-                          index: 2,
+                          index: 3,
                           child: SectionHeader(title: 'Clases de hoy'),
                         ),
-                        _TodayScheduleSection(today: today, startIndex: 3),
+                        _TodayScheduleSection(today: today, startIndex: 4),
                         const SizedBox(height: AppSpacing.xl),
                       ],
                       AnimatedEntrance(
-                        index: 4,
+                        index: 10,
                         child: SectionHeader(
                           title: 'Tareas pendientes',
                           actionLabel: 'Ver todas',
                           onAction: () => context.go('/tasks'),
                         ),
                       ),
-                      _PendingTasksSection(today: today, startIndex: 5),
+                      _PendingTasksSection(today: today, startIndex: 11),
+                      const SizedBox(height: AppSpacing.xl),
+                      AnimatedEntrance(
+                        index: 17,
+                        child: SectionHeader(
+                          title: 'Actividades próximas',
+                          actionLabel: 'Ver todas',
+                          onAction: () => context.go('/tasks'),
+                        ),
+                      ),
+                      _UpcomingActivitiesSection(today: today, startIndex: 18),
                     ]),
                   ),
                 ),
@@ -180,6 +199,90 @@ DateTime? _timeOn(DateTime day, String time) {
   final minute = int.tryParse(parts[1]);
   if (hour == null || minute == null) return null;
   return DateTime(day.year, day.month, day.day, hour, minute);
+}
+
+/// Tareas (no exámenes/eventos) incompletas con fecha hoy-o-vencida.
+List<TaskItem> _pendingTasks(List<TaskItem> tasks, DateTime today) {
+  final endOfToday = DateTime(today.year, today.month, today.day).add(const Duration(days: 1));
+  return tasks
+      .where((t) =>
+          !t.isCompleted &&
+          t.type == TaskType.tarea &&
+          t.dueDate != null &&
+          t.dueDate!.isBefore(endOfToday))
+      .toList()
+    ..sort((a, b) => a.dueDate!.compareTo(b.dueDate!));
+}
+
+/// Exámenes/eventos importantes incompletos en los próximos 7 días
+/// (incluyendo hoy) — separados de "Tareas pendientes" porque conviene verlos
+/// con más anticipación, no sólo el mismo día.
+List<TaskItem> _upcomingActivities(List<TaskItem> tasks, DateTime today) {
+  final startOfToday = DateTime(today.year, today.month, today.day);
+  final endOfWindow = startOfToday.add(const Duration(days: 7));
+  return tasks
+      .where((t) =>
+          !t.isCompleted &&
+          (t.type == TaskType.examen || t.type == TaskType.eventoImportante) &&
+          t.dueDate != null &&
+          !t.dueDate!.isBefore(startOfToday) &&
+          t.dueDate!.isBefore(endOfWindow))
+      .toList()
+    ..sort((a, b) => a.dueDate!.compareTo(b.dueDate!));
+}
+
+/// "Hoy" / "Mañana" / "d MMM" según qué tan lejos esté [due] de [today].
+String _relativeDayLabel(DateTime today, DateTime due) {
+  final startOfToday = DateTime(today.year, today.month, today.day);
+  final dueDay = DateTime(due.year, due.month, due.day);
+  final days = dueDay.difference(startOfToday).inDays;
+  return switch (days) {
+    0 => 'Hoy',
+    1 => 'Mañana',
+    _ => DateFormat('d MMM', 'es_MX').format(due),
+  };
+}
+
+/// Línea "3 clases · 2 tareas · 1 actividad" bajo la fecha — mismo dato que ya
+/// alimenta las 3 secciones de abajo, sin pedir nada nuevo. Omite cualquier
+/// conteo en 0 en vez de mostrar "0 clases".
+class _SummaryLine extends StatelessWidget {
+  final DateTime today;
+
+  const _SummaryLine({required this.today});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return BlocBuilder<ScheduleCubit, ScheduleState>(
+      builder: (context, scheduleState) {
+        final classCount = scheduleState is ScheduleLoaded
+            ? _todaySessions(scheduleState.entries, today).length
+            : 0;
+
+        return BlocBuilder<TasksCubit, TasksState>(
+          builder: (context, tasksState) {
+            final tasks = tasksState is TasksLoaded ? tasksState.tasks : const <TaskItem>[];
+            final taskCount = _pendingTasks(tasks, today).length;
+            final activityCount = _upcomingActivities(tasks, today).length;
+
+            final parts = [
+              if (classCount > 0) '$classCount clase${classCount == 1 ? '' : 's'}',
+              if (taskCount > 0) '$taskCount tarea${taskCount == 1 ? '' : 's'}',
+              if (activityCount > 0) '$activityCount actividad${activityCount == 1 ? '' : 'es'}',
+            ];
+            if (parts.isEmpty) return const SizedBox.shrink();
+
+            return Text(
+              parts.join('  ·  '),
+              style: theme.textTheme.meta?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            );
+          },
+        );
+      },
+    );
+  }
 }
 
 class _NextClassCard extends StatelessWidget {
@@ -287,6 +390,8 @@ class _TodayScheduleSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return BlocBuilder<ScheduleCubit, ScheduleState>(
       builder: (context, state) {
         switch (state) {
@@ -331,6 +436,7 @@ class _TodayScheduleSection extends StatelessWidget {
                     index: startIndex + (fromCache ? 1 : 0) + i,
                     child: AppCard(
                       padding: EdgeInsets.zero,
+                      accentColor: subjectColor(sessions[i].$1.subject, colorScheme),
                       onTap: () => context.go('/schedule'),
                       child: AppListRow(
                         leading: _TimeChip(time: sessions[i].$2.startTime),
@@ -392,16 +498,12 @@ class _PendingTasksSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final startOfToday = DateTime(today.year, today.month, today.day);
-    final endOfToday = startOfToday.add(const Duration(days: 1));
 
     return BlocBuilder<TasksCubit, TasksState>(
       builder: (context, state) {
         if (state is! TasksLoaded) return const SkeletonList(itemCount: 2);
 
-        final pending = state.tasks
-            .where((t) => !t.isCompleted && t.dueDate != null && t.dueDate!.isBefore(endOfToday))
-            .toList()
-          ..sort((a, b) => a.dueDate!.compareTo(b.dueDate!));
+        final pending = _pendingTasks(state.tasks, today);
 
         if (pending.isEmpty) {
           return AnimatedEntrance(
@@ -420,6 +522,7 @@ class _PendingTasksSection extends StatelessWidget {
                 index: startIndex + i,
                 child: AppCard(
                   padding: EdgeInsets.zero,
+                  accentColor: priorityColor(colorScheme, pending[i].priority),
                   onTap: () => context.go('/tasks'),
                   child: AppListRow(
                     icon: pending[i].dueDate!.isBefore(startOfToday)
@@ -433,6 +536,67 @@ class _PendingTasksSection extends StatelessWidget {
                         ? 'Venció el ${DateFormat('d MMM', 'es_MX').format(pending[i].dueDate!)}'
                         : 'Vence hoy${pending[i].hasTime ? DateFormat(" 'a las' h:mm a", 'es_MX').format(pending[i].dueDate!) : ''}',
                     trailing: PriorityFlag(priority: pending[i].priority),
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// Exámenes y eventos importantes de los próximos 7 días — separados de
+/// "Tareas pendientes" porque son otro tipo de pendiente (conviene verlos con
+/// anticipación, no sólo el día que vencen).
+class _UpcomingActivitiesSection extends StatelessWidget {
+  final DateTime today;
+  final int startIndex;
+
+  const _UpcomingActivitiesSection({required this.today, required this.startIndex});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return BlocBuilder<TasksCubit, TasksState>(
+      builder: (context, state) {
+        if (state is! TasksLoaded) return const SkeletonList(itemCount: 2);
+
+        final upcoming = _upcomingActivities(state.tasks, today);
+
+        if (upcoming.isEmpty) {
+          return AnimatedEntrance(
+            index: startIndex,
+            child: const InlineStatus(
+              icon: Symbols.event_available_rounded,
+              message: 'Sin actividades próximas.',
+            ),
+          );
+        }
+
+        return Column(
+          children: [
+            for (var i = 0; i < upcoming.length; i++) ...[
+              AnimatedEntrance(
+                index: startIndex + i,
+                child: AppCard(
+                  padding: EdgeInsets.zero,
+                  accentColor: priorityColor(colorScheme, upcoming[i].priority),
+                  onTap: () => context.go('/tasks'),
+                  child: AppListRow(
+                    icon: upcoming[i].type == TaskType.examen
+                        ? Symbols.quiz_rounded
+                        : Symbols.event_rounded,
+                    iconColor: priorityColor(colorScheme, upcoming[i].priority),
+                    title: upcoming[i].title,
+                    subtitle: _relativeDayLabel(today, upcoming[i].dueDate!) +
+                        (upcoming[i].hasTime
+                            ? DateFormat(" 'a las' h:mm a", 'es_MX').format(upcoming[i].dueDate!)
+                            : ''),
+                    trailing: PriorityFlag(priority: upcoming[i].priority),
                   ),
                 ),
               ),

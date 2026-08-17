@@ -37,7 +37,7 @@ final List<_ShellDestination> _destinations = [
   ),
   _ShellDestination(
     path: '/tasks',
-    label: 'Tareas',
+    label: 'Actividades',
     iconBuilder: _symbolIcon(Symbols.checklist_rounded),
   ),
   _ShellDestination(
